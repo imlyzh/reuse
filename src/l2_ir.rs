@@ -2,13 +2,13 @@ use crate::types::Type;
 
 #[derive(Debug)]
 pub enum Expr {
-    Invoke(String, Vec<String>),
+    Invoke(Value, Vec<Value>),
     // Bind(Pattern, Box<Expr>, Box<Expr>),
     Bind(Bind),
-    Dup(String, Box<Expr>),
-    Drop(String, Box<Expr>),
+    Dup(String, String),
+    Drop(String, String),
     Match(Match),
-    If(String, Box<Expr>, Option<Box<Expr>>),
+    If(Value, Box<Expr>, Option<Box<Expr>>),
 }
 
 #[derive(Debug)]
@@ -25,13 +25,12 @@ pub enum Value {
 pub struct Bind(pub Pattern, pub Type, pub Box<Value>, pub Box<Expr>);
 
 #[derive(Debug)]
-pub struct Match(pub Vec<(Pattern, Expr)>);
+pub struct Match(pub Value, pub Vec<(Pattern, Expr)>);
 
 #[derive(Debug)]
 pub enum Pattern {
     Wildcard,
     Variable(String),
-    Value(Value),
     Constructor(String, Vec<Pattern>),
 }
 
