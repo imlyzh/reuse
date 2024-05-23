@@ -11,6 +11,7 @@ impl Body {
             Body::Compute(c) => c.free_vars(),
             Body::Dup(_, e) => e.free_vars(),
             Body::Drop(_, e) => e.free_vars(),
+            Body::DropReuse(_, _, e) => e.free_vars(),
         }
     }
 }

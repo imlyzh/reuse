@@ -1,57 +1,173 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
-    l2_ir::{Bind, Body, Compute, If, Match},
+    l2_ir::{Bind, Body, Compute, If, Match, Name, Pattern},
     types::Type,
     utils::Scope,
 };
 
+/// insert drop-reuse
+
 impl Body {
-    pub fn insert_drop_reuse(&mut self, scope: Rc<Scope<Type>>) {
+    pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
         match self {
-            Body::Bind(b) => b.insert_drop_reuse(scope),
-            Body::If(i) => i.insert_drop_reuse(scope),
-            Body::Match(m) => m.insert_drop_reuse(scope),
-            Body::Compute(c) => c.insert_drop_reuse(scope),
-            Body::Dup(_, e) => e.insert_drop_reuse(scope),
-            Body::Drop(_, e) => e.insert_drop_reuse(scope),
+            Body::Bind(b) => Body::Bind(b.insert_drop_reuse(scope)),
+            Body::If(i) => Body::If(i.insert_drop_reuse(scope)),
+            Body::Match(m) => Body::Match(m.insert_drop_reuse(scope)),
+            Body::Compute(c) => Body::Compute(c.insert_drop_reuse(scope)),
+            Body::Dup(name, e) => Body::Dup(name, Box::new(e.insert_drop_reuse(scope))),
+            Body::Drop(name, e) => Body::Drop(name, Box::new(e.insert_drop_reuse(scope))),
+            Body::DropReuse(new_name, name, e) => {
+                Body::DropReuse(new_name, name, Box::new(e.insert_drop_reuse(scope)))
+            }
         }
     }
 }
 
 impl Compute {
-    pub fn insert_drop_reuse(&mut self, scope: Rc<Scope<Type>>) {
+    pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
         match self {
             Compute::Closure {
-                free_vars: _,
-                params: _,
+                free_vars,
+                params,
                 body,
-            } => body.insert_drop_reuse(scope),
-            Compute::Variable(_) => {}
-            Compute::Invoke(_, _) => {}
-            Compute::Constructor(_, _, _, _) => {}
+            } => {
+                // TODO
+                Compute::Closure {
+                    free_vars,
+                    params,
+                    body: Box::new(body.insert_drop_reuse(scope)),
+                }
+            }
+            Compute::Variable(_) => self,
+            Compute::Invoke(_, _) => self,
+            Compute::Constructor(_, _, _, _) => self,
         }
     }
 }
 
 impl Bind {
-    pub fn insert_drop_reuse(&mut self, scope: Rc<Scope<Type>>) {
-        self.2.insert_drop_reuse(scope.clone());
-        self.3.insert_drop_reuse(scope);
+    pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
+        let scope = self
+            .0
+            .type_binding(&self.1)
+            .into_iter()
+            .fold(scope, |scope, (name, ty)| {
+                Rc::new(Scope(name, ty, Some(scope)))
+            });
+        Bind(
+            self.0,
+            self.1,
+            Box::new(self.2.insert_drop_reuse(scope.clone())),
+            Box::new(self.3.insert_drop_reuse(scope)),
+        )
     }
 }
 
 impl If {
-    pub fn insert_drop_reuse(&mut self, scope: Rc<Scope<Type>>) {
-        self.1.insert_drop_reuse(scope.clone());
-        self.2.insert_drop_reuse(scope);
+    pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
+        If(
+            self.0.clone(),
+            Box::new(self.1.insert_drop_reuse(scope.clone())),
+            Box::new(self.2.insert_drop_reuse(scope)),
+        )
     }
 }
 
 impl Match {
-    pub fn insert_drop_reuse(&mut self, scope: Rc<Scope<Type>>) {
-        for (_, body) in self.1.iter_mut() {
-            body.insert_drop_reuse(scope.clone());
+    pub fn insert_drop_reuse(mut self, scope: Rc<Scope<Type>>) -> Self {
+        //////////////// sequence problem
+        let ty = scope.find_variable(self.0.as_str()).unwrap();
+        let borrowed_self = &mut self;
+        for (_, body) in borrowed_self.1.iter_mut() {
+            if let Some(new_body) = body.rewrite_construct(&borrowed_self.0, ty) {
+                *body = Body::DropReuse(
+                    format!("__reuse_{}", borrowed_self.0),
+                    borrowed_self.0.clone(),
+                    Box::new(new_body),
+                );
+                break;
+            }
         }
+        ////////////////
+        Match(
+            self.0.clone(),
+            self.1
+                .into_iter()
+                .map(|(pat, body)| (pat, body.insert_drop_reuse(scope.clone())))
+                .collect(),
+        )
+    }
+}
+
+/// rewrite_construct
+
+impl Body {
+    pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
+        match self {
+            Body::Bind(b) => b.rewrite_construct(name, ty).map(Body::Bind),
+            Body::Compute(c) => c.rewrite_construct(name, ty).map(Body::Compute),
+            Body::Dup(name, e) => e
+                .rewrite_construct(name, ty)
+                .map(|e| Body::Dup(name.clone(), Box::new(e))),
+            Body::Drop(name, e) => e
+                .rewrite_construct(name, ty)
+                .map(|e| Body::Drop(name.clone(), Box::new(e))),
+            Body::DropReuse(new_name, name, e) => e
+                .rewrite_construct(name, ty)
+                .map(|e| Body::DropReuse(new_name.clone(), name.clone(), Box::new(e))),
+            Body::If(_) => todo!(),
+            Body::Match(_) => todo!(),
+        }
+    }
+}
+
+impl Bind {
+    pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
+        if let Some(t2) = self.2.rewrite_construct(name, ty) {
+            return Some(Bind(
+                self.0.clone(),
+                self.1.clone(),
+                Box::new(t2),
+                self.3.clone(),
+            ));
+        }
+        if let Some(t3) = self.3.rewrite_construct(name, ty) {
+            return Some(Bind(
+                self.0.clone(),
+                self.1.clone(),
+                self.2.clone(),
+                Box::new(t3),
+            ));
+        }
+        None
+    }
+}
+
+impl Compute {
+    pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
+        match self {
+            Compute::Constructor(cname, cty, None, params) => {
+                if ty != cty {
+                    return None;
+                }
+                Some(Compute::Constructor(
+                    cname.to_string(),
+                    cty.clone(),
+                    Some(format!("__reuse_{}", name)),
+                    params.clone(),
+                ))
+            }
+            // Compute::Closure { free_vars, params, body } => todo!(),
+            _ => None,
+        }
+    }
+}
+
+/// binding type to pattern(equality type deconstruct) 等价于类型解构
+
+impl Pattern {
+    pub fn type_binding(&self, ty: &Type) -> HashMap<Name, Type> {
+        todo!()
     }
 }
