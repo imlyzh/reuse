@@ -94,7 +94,15 @@ impl Match {
             self.0.clone(),
             self.1
                 .into_iter()
-                .map(|(pat, body)| (pat, body.insert_drop_reuse(scope.clone())))
+                .map(|(pat, body)| {
+                    let scope = pat
+                        .type_binding(ty)
+                        .into_iter()
+                        .fold(scope.clone(), |scope, (name, ty)| {
+                            Rc::new(Scope(name, ty, Some(scope)))
+                        });
+                    (pat, body.insert_drop_reuse(scope.clone()))
+                })
                 .collect(),
         )
     }
