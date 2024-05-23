@@ -17,7 +17,8 @@ Nested Blocks, Nested Expressions
 
 Flatted IR: Nested Blocks, Flattened Expressions in Blocks
 
-1. Lifetime Analysis: Insert Drop-Reuse and Insert Duplication
+1. Construct Move-Reuse Pair
 2. Insert Drop
-3. Drop unrolling
-4. Dup/Drop reduction
+3. Unrolling Copy/Move to Bind and Dup/Bind and Optional Reuse
+4. Drop unrolling
+5. Dup/Drop reduction
