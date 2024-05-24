@@ -1,12 +1,10 @@
 use std::{collections::HashSet, rc::Rc};
 
 use crate::{
-    l2_ir::{Bind, Body, If, Match, Name},
+    l2_ir::{Bind, Body, Compute, If, Match, Name},
     types::Type,
     utils::Scope,
 };
-
-/// Move == drop/drop-reuse
 
 impl Body {
     /// trivial
@@ -62,8 +60,10 @@ impl Bind {
         let (body, liveness) = self.3.insert_reuse_from_liveness(env.clone());
         let liveness: HashSet<Name> = liveness.difference(&pat_deefined_vars).cloned().collect();
 
+        let (it2, it2_free_vars) = self.2.insert_reuse_from_liveness(env.clone());
+
         // get bind used variable, liveness check, try rewrite
-        let body = self.2.free_vars().into_iter().fold(body, |body, var|
+        let body = it2_free_vars.into_iter().fold(body, |body, var|
             // is linear
             if !liveness.contains(&var) {
                 // find var type
@@ -83,7 +83,51 @@ impl Bind {
             .into_iter()
             .fold(body, |body, var| Body::Dup(var, Box::new(body)));
 
-        (Bind(self.0, self.1, self.2, Box::new(body)), liveness)
+        (
+            Bind(self.0, self.1, Box::new(it2), Box::new(body)),
+            liveness,
+        )
+    }
+}
+
+impl Compute {
+    /// Notice
+    pub fn insert_reuse_from_liveness(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
+        match self {
+            Compute::Closure {
+                free_vars,
+                params,
+                body,
+            } => {
+                // add free_vars to env
+                let env = free_vars.iter().fold(env, |env, name| {
+                    let ty = env.find_variable(name).unwrap();
+                    Rc::new(Scope(name.clone(), ty.clone(), Some(env)))
+                });
+                // add params to env
+                let env = params.iter().fold(env, |env, name| {
+                    let ty = todo!();
+                    Rc::new(Scope(name.clone(), ty, Some(env)))
+                });
+
+                let (body, _) = body.insert_reuse_from_liveness(env);
+                // notice: closure_liveness equal to free_vars
+                // debug_assert_eq!(closure_liveness, free_vars.iter().cloned().collect());
+
+                (
+                    Compute::Closure {
+                        free_vars: free_vars.clone(),
+                        params,
+                        body: Box::new(body),
+                    },
+                    free_vars.into_iter().collect(),
+                )
+            }
+            _ => {
+                let free_vars = self.free_vars();
+                (self, free_vars)
+            }
+        }
     }
 }
 
