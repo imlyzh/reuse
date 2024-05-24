@@ -9,6 +9,7 @@ use crate::{
 /// insert drop-reuse
 
 impl Body {
+    /// Trivial
     pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
         match self {
             Body::Bind(b) => Body::Bind(b.insert_drop_reuse(scope)),
@@ -25,6 +26,7 @@ impl Body {
 }
 
 impl Compute {
+    /// Notice
     pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
         match self {
             Compute::Closure {
@@ -47,6 +49,7 @@ impl Compute {
 }
 
 impl Bind {
+    /// Trivial
     pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
         let scope = self
             .0
@@ -65,6 +68,7 @@ impl Bind {
 }
 
 impl If {
+    /// Trivial
     pub fn insert_drop_reuse(self, scope: Rc<Scope<Type>>) -> Self {
         If(
             self.0.clone(),
@@ -75,6 +79,7 @@ impl If {
 }
 
 impl Match {
+    /// Notice
     pub fn insert_drop_reuse(mut self, scope: Rc<Scope<Type>>) -> Self {
         //////////////// sequence problem
         let ty = scope.find_variable(self.0.as_str()).unwrap();
@@ -111,6 +116,7 @@ impl Match {
 /// rewrite_construct
 
 impl Body {
+    /// Trivial
     pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
         match self {
             Body::Bind(b) => b.rewrite_construct(name, ty).map(Body::Bind),
@@ -124,6 +130,7 @@ impl Body {
             Body::DropReuse(new_name, name, e) => e
                 .rewrite_construct(name, ty)
                 .map(|e| Body::DropReuse(new_name.clone(), name.clone(), Box::new(e))),
+            // Non-trivial
             Body::If(_) => todo!(),
             Body::Match(_) => todo!(),
         }
@@ -131,6 +138,7 @@ impl Body {
 }
 
 impl Bind {
+    /// Trivial
     pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
         if let Some(t2) = self.2.rewrite_construct(name, ty) {
             return Some(Bind(
@@ -153,6 +161,7 @@ impl Bind {
 }
 
 impl Compute {
+    /// Notice
     pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
         match self {
             Compute::Constructor(cname, cty, None, params) => {

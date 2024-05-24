@@ -15,10 +15,16 @@ Nested Blocks, Nested Expressions
 
 ### L2 IR
 
-Flatted IR: Nested Blocks, Flattened Expressions in Blocks
+ANF ir
 
-1. Construct Move-Reuse Pair
-2. Insert Drop
-3. Unrolling Copy/Move to Bind and Dup/Bind and Optional Reuse
-4. Drop unrolling
-5. Dup/Drop reduction
+1. [x] Insert Drop-Reuse
+2. [ ] Liveness Analysis, if move then Insert Drop-Reuse else Insert Drop
+3. [ ] Insert Dup to Bind after
+4. [ ] Drop unrolling
+5. [ ] Dup/Drop reduction
+
+### Optional
+
+- [ ] AST metainfo
+- [ ] Memorize
+- [ ] inet target
