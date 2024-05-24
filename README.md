@@ -17,11 +17,11 @@ Nested Blocks, Nested Expressions
 
 ANF ir
 
-1. [x] Insert Drop-Reuse
-2. [ ] Liveness Analysis, if move then Insert Drop-Reuse else Insert Drop
-3. [ ] Insert Dup to Bind after
-4. [ ] Drop unrolling
-5. [ ] Dup/Drop reduction
+1. [x] Liveness Analysis
+    1. [x] Insert Drop/Drop-Reuse
+    2. [ ] Insert Dup
+2. [ ] Drop unrolling
+3. [ ] Dup/Drop reduction
 
 ### Optional
 

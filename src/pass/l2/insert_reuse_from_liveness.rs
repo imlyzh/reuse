@@ -10,18 +10,18 @@ use crate::{
 
 impl Body {
     /// trivial
-    pub fn insert_move(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
+    pub fn insert_reuse_from_liveness(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
         match self {
             Body::Bind(b) => {
-                let (r, liveness) = b.insert_move(env);
+                let (r, liveness) = b.insert_reuse_from_liveness(env);
                 (Body::Bind(r), liveness)
             }
             Body::If(i) => {
-                let (r, liveness) = i.insert_move(env);
+                let (r, liveness) = i.insert_reuse_from_liveness(env);
                 (Body::If(r), liveness)
             }
             Body::Match(m) => {
-                let (r, liveness) = m.insert_move(env);
+                let (r, liveness) = m.insert_reuse_from_liveness(env);
                 (Body::Match(r), liveness)
             }
             Body::Compute(c) => {
@@ -29,15 +29,15 @@ impl Body {
                 (Body::Compute(c), liveness)
             }
             Body::Dup(name, e) => {
-                let (r, liveness) = e.insert_move(env);
+                let (r, liveness) = e.insert_reuse_from_liveness(env);
                 (Body::Dup(name, Box::new(r)), liveness)
             }
             Body::Drop(name, e) => {
-                let (r, liveness) = e.insert_move(env);
+                let (r, liveness) = e.insert_reuse_from_liveness(env);
                 (Body::Drop(name, Box::new(r)), liveness)
             }
             Body::DropReuse(new_name, name, e) => {
-                let (r, liveness) = e.insert_move(env);
+                let (r, liveness) = e.insert_reuse_from_liveness(env);
                 (Body::DropReuse(new_name, name, Box::new(r)), liveness)
             }
         }
@@ -46,7 +46,7 @@ impl Body {
 
 impl Bind {
     /// Notice
-    pub fn insert_move(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
+    pub fn insert_reuse_from_liveness(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
         // add pattern to new env
         let env = self
             .0
@@ -57,14 +57,15 @@ impl Bind {
             });
 
         // run pass
-        let (body, liveness) = self.3.insert_move(env.clone());
+        let (body, liveness) = self.3.insert_reuse_from_liveness(env.clone());
         let liveness: HashSet<Name> = liveness
             .difference(&self.0.defined_vars())
             .cloned()
             .collect();
 
         // get variable, liveness check, try rewrite
-        let body = self.2.free_vars().into_iter().fold(body, |body, var| // is linear
+        let body = self.2.free_vars().into_iter().fold(body, |body, var|
+            // is linear
             if !liveness.contains(&var) {
                 // find var type
                 let ty: &Type = env.find_variable(&var).unwrap();
@@ -85,10 +86,10 @@ impl Bind {
 
 impl If {
     /// Trivial
-    pub fn insert_move(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
+    pub fn insert_reuse_from_liveness(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
         let borrowed_self = self;
-        let (it1, mut liveness1) = borrowed_self.1.insert_move(env.clone());
-        let (it2, liveness2) = borrowed_self.2.insert_move(env);
+        let (it1, mut liveness1) = borrowed_self.1.insert_reuse_from_liveness(env.clone());
+        let (it2, liveness2) = borrowed_self.2.insert_reuse_from_liveness(env);
         liveness1.extend(liveness2);
         liveness1.insert(borrowed_self.0.clone());
         (
@@ -100,7 +101,7 @@ impl If {
 
 impl Match {
     /// Notice
-    pub fn insert_move(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
+    pub fn insert_reuse_from_liveness(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
         let ty: &Type = env.find_variable(self.0.as_str()).unwrap();
 
         let mut new_liveness = HashSet::new();
@@ -116,7 +117,7 @@ impl Match {
                 });
 
             // run pass
-            let (mut body, liveness) = body.insert_move(env);
+            let (mut body, liveness) = body.insert_reuse_from_liveness(env);
             let liveness: HashSet<Name> =
                 liveness.difference(&pat.defined_vars()).cloned().collect();
 
