@@ -19,7 +19,7 @@ ANF ir
 
 1. [x] Liveness Analysis
     1. [x] Insert Drop/Drop-Reuse
-    2. [ ] Insert Dup
+    2. [x] Insert Dup
 2. [ ] Drop unrolling
 3. [ ] Dup/Drop reduction
 

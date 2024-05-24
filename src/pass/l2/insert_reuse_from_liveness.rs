@@ -56,14 +56,13 @@ impl Bind {
                 Rc::new(Scope(name, ty, Some(scope)))
             });
 
+        let pat_deefined_vars = self.0.defined_vars();
+
         // run pass
         let (body, liveness) = self.3.insert_reuse_from_liveness(env.clone());
-        let liveness: HashSet<Name> = liveness
-            .difference(&self.0.defined_vars())
-            .cloned()
-            .collect();
+        let liveness: HashSet<Name> = liveness.difference(&pat_deefined_vars).cloned().collect();
 
-        // get variable, liveness check, try rewrite
+        // get bind used variable, liveness check, try rewrite
         let body = self.2.free_vars().into_iter().fold(body, |body, var|
             // is linear
             if !liveness.contains(&var) {
@@ -79,7 +78,11 @@ impl Bind {
                 body
             });
 
-        // TODO: body insert DUP
+        // insert DUP to Pattern Bind after
+        let body = pat_deefined_vars
+            .into_iter()
+            .fold(body, |body, var| Body::Dup(var, Box::new(body)));
+
         (Bind(self.0, self.1, self.2, Box::new(body)), liveness)
     }
 }
@@ -116,10 +119,12 @@ impl Match {
                     Rc::new(Scope(name, ty, Some(scope)))
                 });
 
+            let pat_deefined_vars = pat.defined_vars();
+
             // run pass
             let (mut body, liveness) = body.insert_reuse_from_liveness(env);
             let liveness: HashSet<Name> =
-                liveness.difference(&pat.defined_vars()).cloned().collect();
+                liveness.difference(&pat_deefined_vars).cloned().collect();
 
             // is linear
             if !liveness.contains(&self.0) {
@@ -134,7 +139,11 @@ impl Match {
                 };
             }
 
-            // TODO: body insert DUP
+            // insert DUP to Pattern Bind after
+            let body = pat_deefined_vars
+                .into_iter()
+                .fold(body, |body, var| Body::Dup(var, Box::new(body)));
+
             new_liveness.extend(liveness);
             pairs.push((pat, body));
         }
