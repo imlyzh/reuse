@@ -2,7 +2,7 @@ use std::collections::HashMap;
 // use std::rc::Rc;
 
 use crate::{
-    l2_ir::{Bind, Body, Compute, Name, Pattern},
+    l2_ir::{Bind, Body, Compute, If, Match, Name, Pattern},
     types::Type,
     // l2_ir::{If, Match},
     // utils::Scope,
@@ -132,9 +132,8 @@ impl Body {
             Body::DropReuse(new_name, name, e) => e
                 .rewrite_construct(name, ty)
                 .map(|e| Body::DropReuse(new_name.clone(), name.clone(), Box::new(e))),
-            // Non-trivial
-            Body::If(_) => todo!(),
-            Body::Match(_) => todo!(),
+            Body::If(i) => i.rewrite_construct(name, ty).map(|i| Body::If(i)),
+            Body::Match(m) => m.rewrite_construct(name, ty).map(|m| Body::Match(m)),
         }
     }
 }
@@ -159,6 +158,58 @@ impl Bind {
             ));
         }
         None
+    }
+}
+
+impl If {
+    /// Notice
+    pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
+        let it1 = self.1.rewrite_construct(name, ty);
+        let it2 = self.2.rewrite_construct(name, ty);
+        let r = match (it1, it2) {
+            (Some(it1), None) => If(
+                self.0.clone(),
+                Box::new(it1),
+                Box::new(Body::Drop(name.clone(), self.2.clone())),
+            ),
+            (None, Some(it2)) => If(
+                self.0.clone(),
+                Box::new(Body::Drop(name.clone(), self.1.clone())),
+                Box::new(it2),
+            ),
+            (Some(it1), Some(it2)) => If(self.0.clone(), Box::new(it1), Box::new(it2)),
+            (None, None) => return None,
+        };
+        Some(r)
+    }
+}
+
+impl Match {
+    /// Notice
+    pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
+        let matchs: Vec<_> = self
+            .1
+            .iter()
+            .map(|(pat, body)| {
+                (
+                    pat.clone(),
+                    body.rewrite_construct(name, ty).ok_or(body.clone()),
+                )
+            })
+            .collect();
+        // return cond: not exist branch has been rewrited
+        let exist_rewrited = matchs.iter().any(|(_, body)| body.is_ok());
+        if !exist_rewrited {
+            return None;
+        }
+        let matchs = matchs
+            .into_iter()
+            .map(|(pat, body)| match body {
+                Ok(body) => (pat, body),
+                Err(body) => (pat, Body::Drop(name.clone(), Box::new(body))),
+            })
+            .collect();
+        Some(Match(self.0.clone(), matchs))
     }
 }
 
