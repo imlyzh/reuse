@@ -1,4 +1,4 @@
-use crate::types::Type;
+use crate::types::{FunctionType, Type};
 
 pub type Name = String;
 
@@ -21,6 +21,7 @@ pub enum Compute {
     // Lambda(params, body)
     // Lambda(Vec<String>, Box<Expr>),
     Closure {
+        fun_type: FunctionType,
         free_vars: Vec<Name>,
         params: Vec<Name>,
         body: Box<Body>,

@@ -95,6 +95,7 @@ impl Compute {
     pub fn insert_reuse_from_liveness(self, env: Rc<Scope<Type>>) -> (Self, HashSet<Name>) {
         match self {
             Compute::Closure {
+                fun_type,
                 free_vars,
                 params,
                 body,
@@ -105,9 +106,9 @@ impl Compute {
                     Rc::new(Scope(name.clone(), ty.clone(), Some(env)))
                 });
                 // add params to env
-                let env = params.iter().fold(env, |env, name| {
-                    let ty = todo!();
-                    Rc::new(Scope(name.clone(), ty, Some(env)))
+                let env = params.iter().enumerate().fold(env, |env, (index, name)| {
+                    let ty = fun_type.params.get(index).unwrap();
+                    Rc::new(Scope(name.clone(), ty.clone(), Some(env)))
                 });
 
                 let (body, _) = body.insert_reuse_from_liveness(env);
@@ -116,6 +117,7 @@ impl Compute {
 
                 (
                     Compute::Closure {
+                        fun_type,
                         free_vars: free_vars.clone(),
                         params,
                         body: Box::new(body),
