@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Bool,
@@ -12,7 +10,7 @@ pub enum Type {
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructType {
     pub name: String,
-    pub fields: HashMap<String, Type>,
+    pub fields: Vec<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

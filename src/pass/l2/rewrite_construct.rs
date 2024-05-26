@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::identity};
 // use std::rc::Rc;
 
 use crate::{
     l2_ir::{Bind, Body, Compute, If, Match, Name, Pattern},
-    types::Type,
+    types::{StructType, Type},
     // l2_ir::{If, Match},
     // utils::Scope,
 };
@@ -239,6 +239,23 @@ impl Compute {
 
 impl Pattern {
     pub fn type_binding(&self, ty: &Type) -> HashMap<Name, Type> {
-        todo!()
+        match (self, ty) {
+            (Pattern::Wildcard, _) => HashMap::new(),
+            (Pattern::Variable(v), ty) => vec![(v.clone(), ty.clone())].into_iter().collect(),
+            (Pattern::Constructor(c, params), Type::Struct(StructType { name, fields }))
+                if c == name =>
+            {
+                params
+                    .iter()
+                    .zip(fields.into_iter())
+                    .map(|(pat, ty)| pat.type_binding(ty))
+                    .reduce(|mut l, r| {
+                        l.extend(r);
+                        l
+                    })
+                    .map_or_else(|| HashMap::new(), identity)
+            }
+            _ => panic!("type binding to pattern, not matched: {:?}, {:?}", self, ty),
+        }
     }
 }
