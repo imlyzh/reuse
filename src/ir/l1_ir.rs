@@ -6,7 +6,7 @@ pub enum Expr {
     Lambda(Vec<String>, Block),
     // StaticInvoke(String, Vec<Expr>),
     Constructor(String, Option<Box<Expr>>, Vec<Expr>),
-    If(Expr, Block, Option<Block>),
+    If(Box<Expr>, Block, Option<Block>),
 }
 
 #[derive(Debug)]

@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::identity};
 // use std::rc::Rc;
 
 use crate::{
-    l2_ir::{Bind, Body, Compute, If, Match, Name, Pattern},
+    ir::l2_ir::{Bind, Body, Compute, If, Match, Name, Pattern},
     types::{StructType, Type},
     // l2_ir::{If, Match},
     // utils::Scope,

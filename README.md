@@ -17,11 +17,18 @@ Nested Blocks, Nested Expressions
 
 ANF ir
 
-1. [x] Liveness Analysis
-    1. [x] Insert Drop/Drop-Reuse
-    2. [x] Insert Dup
-2. [ ] Drop unrolling
-3. [ ] Dup/Drop reduction
+1. [ ] to LinearANF
+   1. [ ] Move Analysis
+   2. [ ] Borrow Analysis
+
+### L3 IR
+
+LinearANF ir
+
+1. [x] Insert Drop/Drop-Reuse
+2. [x] Insert Dup
+3. [ ] Drop unrolling
+4. [ ] Dup/Drop reduction
 
 ### Optional
 

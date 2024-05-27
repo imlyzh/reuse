@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::l2_ir::{Bind, Body, Compute, If, Match, Pattern};
+use crate::ir::l2_ir::{Bind, Body, Compute, If, Match, Pattern};
 
 impl Body {
     pub fn free_vars(&self) -> HashSet<String> {
