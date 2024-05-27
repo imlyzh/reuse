@@ -25,8 +25,8 @@ ANF ir
 
 LinearANF ir
 
-1. [x] Insert Drop/Drop-Reuse
-2. [x] Insert Dup
+1. [ ] Insert Drop/Drop-Reuse
+2. [ ] Insert Dup
 3. [ ] Drop unrolling
 4. [ ] Dup/Drop reduction
 

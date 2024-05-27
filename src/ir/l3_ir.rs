@@ -11,7 +11,8 @@ pub enum Body {
     Drop(Name, Box<Body>),
     DropReuse(Name, Name, Box<Body>),
     If(If),
-    Match(Match),
+    BMatch(Match),
+    DMatch(Match),
 }
 
 #[derive(Debug, Clone)]
