@@ -15,6 +15,7 @@ pub struct StructType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionType {
+    // TODO: L2 Owned
     pub params: Vec<Type>,
     pub ret_type: Box<Type>,
 }

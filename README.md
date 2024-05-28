@@ -17,18 +17,17 @@ Nested Blocks, Nested Expressions
 
 ANF ir
 
-1. [ ] to LinearANF
-   1. [ ] Move Analysis
-   2. [ ] Borrow Analysis
+1. [ ] Borrow Check
+2. [ ] Linearnize
+   1. [ ] Insert Dup
 
 ### L3 IR
 
 LinearANF ir
 
 1. [ ] Insert Drop/Drop-Reuse
-2. [ ] Insert Dup
-3. [ ] Drop unrolling
-4. [ ] Dup/Drop reduction
+   1. [ ] Drop unrolling
+   2. [ ] Dup/Drop reduction
 
 ### Optional
 

@@ -7,9 +7,6 @@ pub enum Body {
     // Bind(Pattern, Box<Expr>, Box<Expr>),
     Compute(Compute),
     Bind(Bind),
-    Dup(Name, Box<Body>),
-    Drop(Name, Box<Body>),
-    DropReuse(Name, Name, Box<Body>),
     If(If),
     Match(Match),
 }
