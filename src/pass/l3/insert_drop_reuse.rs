@@ -98,7 +98,7 @@ impl Bind {
 
         // run pass
         let (cont, liveness) = self.cont.insert_drop_reuse(linear.clone(), borrow.clone());
-        let liveness: HashSet<Name> = liveness.difference(&pat_deefined_vars).cloned().collect();
+        let liveness: HashSet<Name> = liveness.difference(pat_deefined_vars).cloned().collect();
 
         let (value, it2_free_vars) = self.value.insert_drop_reuse(linear.clone(), borrow.clone());
 
@@ -120,7 +120,7 @@ impl Bind {
                 body
             });
             // insert DUP to Pattern Bind after
-            pat_deefined_vars.into_iter().fold(cont, |body, var| {
+            pat_deefined_vars.iter().fold(cont, |body, var| {
                 Body::DupOnBind(var.clone(), Box::new(body))
             })
         } else {

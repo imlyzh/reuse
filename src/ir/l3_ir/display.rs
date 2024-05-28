@@ -45,11 +45,7 @@ impl fmt::Display for Compute {
         match self {
             Compute::Variable(v) => write!(f, "{}", v),
             Compute::Invoke(fun, args) => {
-                let args = args
-                    .iter()
-                    .map(|name| name.clone())
-                    .collect::<Vec<String>>()
-                    .join(", ");
+                let args = args.to_vec().join(", ");
                 write!(f, "{}({})", fun, args)
             }
             // FIXME: fun_type, free_vars
@@ -67,11 +63,7 @@ impl fmt::Display for Compute {
                 write!(f, "fn({}) -> {} {{\n{}}}\n", args, fun_type, body)
             }
             Compute::Constructor(cname, _ty, reuse, args) => {
-                let args = args
-                    .iter()
-                    .map(|name| name.clone())
-                    .collect::<Vec<String>>()
-                    .join(", ");
+                let args = args.to_vec().join(", ");
                 if let Some(reuse) = reuse {
                     write!(f, "{}@{}({})", cname, reuse, args)
                 } else {

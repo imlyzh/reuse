@@ -8,8 +8,7 @@ pub type NullableScope<T> = Option<Rc<Scope<T>>>;
 pub fn find_variable<T: Clone>(record: &NullableScope<T>, name: &str) -> Option<T> {
     record
         .clone()
-        .map(|re| re.find_variable(name).cloned())
-        .flatten()
+        .and_then(|re| re.find_variable(name).cloned())
 }
 
 impl<T> Scope<T> {

@@ -132,8 +132,8 @@ impl Body {
             Body::DropReuse(new_name, src_name, e) => e
                 .rewrite_construct(name, ty)
                 .map(|e| Body::DropReuse(new_name.clone(), src_name.clone(), Box::new(e))),
-            Body::If(i) => i.rewrite_construct(name, ty).map(|i| Body::If(i)),
-            Body::Match(m) => m.rewrite_construct(name, ty).map(|m| Body::Match(m)),
+            Body::If(i) => i.rewrite_construct(name, ty).map(Body::If),
+            Body::Match(m) => m.rewrite_construct(name, ty).map(Body::Match),
             Body::DupOnBind(src_name, e) => e
                 .rewrite_construct(name, ty)
                 .map(|e| Body::DupOnBind(src_name.clone(), Box::new(e))),
@@ -260,13 +260,13 @@ impl Pattern {
             {
                 params
                     .iter()
-                    .zip(fields.into_iter())
+                    .zip(fields)
                     .map(|(pat, ty)| pat.type_binding(ty))
                     .reduce(|mut l, r| {
                         l.extend(r);
                         l
                     })
-                    .map_or_else(|| HashMap::new(), identity)
+                    .map_or_else(HashMap::new, identity)
             }
             _ => panic!("type binding to pattern, not matched: {:?}, {:?}", self, ty),
         }
