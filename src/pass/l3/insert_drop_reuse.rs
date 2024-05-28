@@ -23,7 +23,35 @@ impl Function {
 }
 
 impl Body {
+    /// Notice
     pub fn insert_drop_reuse(
+        self,
+        mut linear: NullableScope<Type>,
+        borrow: NullableScope<Type>,
+    ) -> (Self, HashSet<Name>) {
+        // order problem
+        let (mut body, liveness) = self.process_match_raw(linear.clone(), borrow.clone());
+        while let Some(var) = linear {
+            // if variable is not live
+            if !liveness.contains(&var.0) {
+                body = if let Some(new_body) = body.rewrite_construct(&var.0, &var.1) {
+                    Body::DropReuse(
+                        format!("__reuse_{}", &var.0),
+                        var.0.clone(),
+                        Box::new(new_body),
+                    )
+                } else {
+                    Body::Drop(var.0.clone(), Box::new(body))
+                };
+                // body = Body::Drop(var.0.clone(), Box::new(body));
+            }
+            linear = var.2.clone();
+        }
+        (body, liveness)
+    }
+
+    // pub fn insert_drop_reuse(
+    pub fn process_match_raw(
         self,
         linear: NullableScope<Type>,
         borrow: NullableScope<Type>,
@@ -101,11 +129,14 @@ impl Bind {
         let liveness: HashSet<Name> = liveness.difference(pat_deefined_vars).cloned().collect();
 
         let (value, it2_free_vars) = self.value.insert_drop_reuse(linear.clone(), borrow.clone());
+        let liveness = liveness.union(&it2_free_vars).cloned().collect();
 
         // TODO
         // get bind used variable, liveness check, try rewrite
-        let cont = if let Owned::Linear = self.owned {
-            let cont = it2_free_vars.into_iter().fold(cont, |body, var|
+        /* Disable option
+        let mut cont = cont;
+        if let Owned::Linear = self.owned {
+            cont = it2_free_vars.into_iter().fold(cont, |body, var|
             // is linear
             if !liveness.contains(&var) {
                 // find var type
@@ -119,14 +150,17 @@ impl Bind {
             } else {
                 body
             });
-            // insert DUP to Pattern Bind after
-            pat_deefined_vars.iter().fold(cont, |body, var| {
-                Body::DupOnBind(var.clone(), Box::new(body))
-            })
         } else {
             cont
         };
+        // */
 
+        // insert DUP to Pattern Bind after
+        // /* Disable option
+        let cont = pat_deefined_vars.iter().fold(cont, |body, var| {
+            Body::DupOnBind(var.clone(), Box::new(body))
+        });
+        // */
         (
             Bind {
                 pat: self.pat,
@@ -273,7 +307,8 @@ impl Match {
                 liveness.difference(&pat_deefined_vars).cloned().collect();
 
             // bind is linear
-            let body = if let Owned::Linear = self.owned {
+            /* Disable option
+            if let Owned::Linear = self.owned {
                 if !liveness.contains(&self.value) {
                     body = if let Some(new_body) = body.rewrite_construct(&self.value, &ty) {
                         Body::DropReuse(
@@ -285,17 +320,19 @@ impl Match {
                         Body::Drop(self.value.clone(), Box::new(body))
                     };
                 }
-                // insert DUP to Pattern Bind after
-                pat_deefined_vars.into_iter().fold(body, |body, var| {
-                    Body::DupOnBind(var.clone(), Box::new(body))
-                })
-            } else {
-                body
-            };
+            }
+            // */
 
+            // insert DUP to Pattern Bind after
+            // /* Disable option
+            body = pat_deefined_vars.into_iter().fold(body, |body, var| {
+                Body::DupOnBind(var.clone(), Box::new(body))
+            });
+            // */
             new_liveness.extend(liveness);
             pairs.push((pat, body));
         }
+        new_liveness.insert(self.value.clone());
         (
             Match {
                 value: self.value,
