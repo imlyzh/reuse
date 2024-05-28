@@ -35,6 +35,7 @@ impl fmt::Display for Body {
             Body::DropReuse(reuse, src, cont) => {
                 write!(f, "let {} = drop-reuse {};\n{}", reuse, src, cont)
             }
+            Body::DupOnBind(src, cont) => write!(f, "dup {};\n{}", src, cont),
         }
     }
 }

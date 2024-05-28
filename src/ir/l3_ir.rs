@@ -11,6 +11,7 @@ pub enum Body {
     Bind(Bind),
     If(If),
     Match(Match),
+    DupOnBind(Name, Box<Body>),
     Dup(Name, Name, Box<Body>),
     Drop(Name, Box<Body>),
     DropReuse(Name, Name, Box<Body>),

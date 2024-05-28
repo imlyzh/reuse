@@ -63,6 +63,7 @@ impl Body {
                 let (r, liveness) = e.insert_drop_reuse(linear, borrow);
                 (Body::DropReuse(new_name, name, Box::new(r)), liveness)
             }
+            Body::DupOnBind(_, _) => unreachable!(),
         }
     }
 }
@@ -93,18 +94,18 @@ impl Bind {
                 });
         }
 
+        let pat_deefined_vars = &self.pat.defined_vars();
+
         // run pass
         let (cont, liveness) = self.cont.insert_drop_reuse(linear.clone(), borrow.clone());
-        let liveness: HashSet<Name> = liveness
-            .difference(&self.pat.defined_vars())
-            .cloned()
-            .collect();
+        let liveness: HashSet<Name> = liveness.difference(&pat_deefined_vars).cloned().collect();
 
         let (value, it2_free_vars) = self.value.insert_drop_reuse(linear.clone(), borrow.clone());
 
         // TODO
         // get bind used variable, liveness check, try rewrite
-        let cont = it2_free_vars.into_iter().fold(cont, |body, var|
+        let cont = if let Owned::Linear = self.owned {
+            let cont = it2_free_vars.into_iter().fold(cont, |body, var|
             // is linear
             if !liveness.contains(&var) {
                 // find var type
@@ -118,6 +119,13 @@ impl Bind {
             } else {
                 body
             });
+            // insert DUP to Pattern Bind after
+            pat_deefined_vars.into_iter().fold(cont, |body, var| {
+                Body::DupOnBind(var.clone(), Box::new(body))
+            })
+        } else {
+            cont
+        };
 
         (
             Bind {
@@ -265,7 +273,7 @@ impl Match {
                 liveness.difference(&pat_deefined_vars).cloned().collect();
 
             // bind is linear
-            if let Owned::Linear = self.owned {
+            let body = if let Owned::Linear = self.owned {
                 if !liveness.contains(&self.value) {
                     body = if let Some(new_body) = body.rewrite_construct(&self.value, &ty) {
                         Body::DropReuse(
@@ -277,7 +285,13 @@ impl Match {
                         Body::Drop(self.value.clone(), Box::new(body))
                     };
                 }
-            }
+                // insert DUP to Pattern Bind after
+                pat_deefined_vars.into_iter().fold(body, |body, var| {
+                    Body::DupOnBind(var.clone(), Box::new(body))
+                })
+            } else {
+                body
+            };
 
             new_liveness.extend(liveness);
             pairs.push((pat, body));

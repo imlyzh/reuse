@@ -134,6 +134,9 @@ impl Body {
                 .map(|e| Body::DropReuse(new_name.clone(), src_name.clone(), Box::new(e))),
             Body::If(i) => i.rewrite_construct(name, ty).map(|i| Body::If(i)),
             Body::Match(m) => m.rewrite_construct(name, ty).map(|m| Body::Match(m)),
+            Body::DupOnBind(src_name, e) => e
+                .rewrite_construct(name, ty)
+                .map(|e| Body::DupOnBind(src_name.clone(), Box::new(e))),
         }
     }
 }
