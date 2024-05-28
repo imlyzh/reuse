@@ -12,7 +12,7 @@ impl fmt::Display for Function {
         let args = self
             .args
             .iter()
-            .map(|(name, (ty, owned))| format!("{} {}: {}", owned, name, ty))
+            .map(|(name, (ty, owned))| format!("{}{}: {}", owned, name, ty))
             .collect::<Vec<String>>()
             .join(", ");
         write!(
