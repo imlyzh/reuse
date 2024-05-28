@@ -42,7 +42,7 @@ pub struct Match(pub Name, pub Vec<(Pattern, Body)>);
 #[derive(Debug, Clone)]
 pub enum Pattern {
     Wildcard,
-    Variable(Name),
+    Variable(Name, BindOwned),
     Constructor(Name, Vec<Pattern>),
 }
 
@@ -51,6 +51,13 @@ pub struct Function {
     pub name: Name,
     pub args: Vec<(Name, Owned)>,
     pub body: Body,
+}
+
+#[derive(Debug, Clone)]
+pub enum BindOwned {
+    // duplication
+    Normal,
+    Linear,
 }
 
 #[derive(Debug, Clone)]
