@@ -16,7 +16,8 @@ impl Body {
             }
             Body::Drop(_, e) => e.free_vars(),
             Body::DropReuse(_, _, e) => e.free_vars(),
-            Body::DupOnBind(_, _) => unreachable!(),
+            // Body::DupOnBind(_, _) => unreachable!(),
+            Body::DupOnBind(_, e) => e.free_vars(),
         }
     }
 }

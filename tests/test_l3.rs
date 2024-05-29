@@ -96,3 +96,59 @@ pub fn test_l3_if() {
     println!("liveness: {:?}", liveness);
     println!("return:\n{}", r);
 }
+
+#[test]
+pub fn test_l3_nested_if() {
+    let input_output_type = Type::Struct(StructType {
+        name: "Cons".to_owned(),
+        fields: vec![Type::Int, Type::Int],
+    });
+    let f = Function {
+        name: "test".to_string(),
+        return_type: Type::Int,
+        args: vec![
+            ("a".to_string(), (input_output_type.clone(), Owned::Linear)),
+            ("b".to_string(), (input_output_type.clone(), Owned::Linear)),
+        ],
+        body: Body::Bind(Bind {
+            pat: Pattern::Constructor(
+                "Cons".to_owned(),
+                vec![
+                    Pattern::Variable("x".to_string()),
+                    Pattern::Variable("xx".to_string()),
+                ],
+            ),
+            owned: Owned::Linear,
+            ty: input_output_type.clone(),
+            value: Box::new(Compute::Variable("a".to_string())),
+            cont: Box::new(Body::Bind(Bind {
+                pat: Pattern::Constructor(
+                    "Cons".to_owned(),
+                    vec![
+                        Pattern::Variable("y".to_string()),
+                        Pattern::Variable("yy".to_string()),
+                    ],
+                ),
+                owned: Owned::Linear,
+                ty: input_output_type.clone(),
+                value: Box::new(Compute::Variable("b".to_string())),
+                cont: Box::new(Body::If(If {
+                    cond: "x".to_owned(),
+                    then: Box::new(Body::If(If {
+                        cond: "y".to_owned(),
+                        then: Box::new(Body::Compute(Compute::Variable("x".to_owned()))),
+                        else_: Box::new(Body::Compute(Compute::Variable("y".to_owned()))),
+                    })),
+                    else_: Box::new(Body::If(If {
+                        cond: "y".to_owned(),
+                        then: Box::new(Body::Compute(Compute::Variable("xx".to_owned()))),
+                        else_: Box::new(Body::Compute(Compute::Variable("yy".to_owned()))),
+                    })),
+                })),
+            })),
+        }),
+    };
+    let (r, liveness) = f.insert_drop_reuse();
+    println!("liveness: {:?}", liveness);
+    println!("return:\n{}", r);
+}
