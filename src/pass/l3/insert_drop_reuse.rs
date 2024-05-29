@@ -1,20 +1,19 @@
-use std::{collections::HashSet, rc::Rc};
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     ir::l3_ir::{Bind, Body, Compute, Function, If, Match, Name, Owned},
     types::Type,
-    utils::{find_variable, NullableScope, Scope},
 };
 
 impl Function {
     pub fn insert_drop_reuse(self) -> (Self, HashSet<Name>) {
-        let mut linear = None;
-        let mut borrow = None;
+        let mut linear = HashMap::new();
+        let mut borrow = HashMap::new();
         for (name, (ty, owned)) in self.args.iter() {
             if let Owned::Linear = owned {
-                linear = Some(Rc::new(Scope(name.clone(), ty.clone(), linear)))
+                linear.insert(name.clone(), ty.clone());
             } else {
-                borrow = Some(Rc::new(Scope(name.clone(), ty.clone(), borrow)))
+                borrow.insert(name.clone(), ty.clone());
             }
         }
         let (body, liveness) = self.body.insert_drop_reuse(linear, borrow);
@@ -27,39 +26,45 @@ impl Body {
     /// Notice
     pub fn insert_drop_reuse(
         self,
-        linear: NullableScope<Type>,
-        borrow: NullableScope<Type>,
+        linear: HashMap<Name, Type>,
+        borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
         // order problem
-        let mut body = self.clone();
-        let mut team_linear = linear.clone();
-        while let Some(var) = team_linear {
+        // let mut body = self.clone();
+        // let mut team_linear = linar.clone();
+        // let linear_set = linear.iter().map(|(k, _)| k.clone()).collect();
+        let free_vars = self.free_vars();
+        let drop_vars: HashMap<String, Type> = linear
+            .clone()
+            .into_iter()
+            .filter(|(var, _)| !free_vars.contains(var))
+            .collect();
+        let new_linear: HashMap<String, Type> = linear
+            .into_iter()
+            .filter(|(var, _)| free_vars.contains(var))
+            .collect();
+        let (mut body, liveness) = self.process_match_raw(new_linear, borrow.clone());
+        for (var, ty) in drop_vars {
             // if variable is not live
             // if !liveness.contains(&var.0) {
             // FIXME
-            if !body.free_vars().contains(&var.0) {
-                body = if let Some(new_body) = body.rewrite_construct(&var.0, &var.1) {
-                    Body::DropReuse(
-                        format!("__reuse_{}", &var.0),
-                        var.0.clone(),
-                        Box::new(new_body),
-                    )
+            if !body.free_vars().contains(&var) {
+                body = if let Some(new_body) = body.rewrite_construct(&var, &ty) {
+                    Body::DropReuse(format!("__reuse_{}", &var), var.clone(), Box::new(new_body))
                 } else {
-                    Body::Drop(var.0.clone(), Box::new(body))
+                    Body::Drop(var, Box::new(body))
                 };
                 // body = Body::Drop(var.0.clone(), Box::new(body));
             }
-            team_linear = var.2.clone();
         }
-        let (body, liveness) = body.process_match_raw(linear.clone(), borrow.clone());
         (body, liveness)
     }
 
     // pub fn insert_drop_reuse(
     pub fn process_match_raw(
         self,
-        linear: NullableScope<Type>,
-        borrow: NullableScope<Type>,
+        mut linear: HashMap<Name, Type>,
+        borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
         match self {
             Body::Bind(b) => {
@@ -79,11 +84,7 @@ impl Body {
                 (Body::Compute(c), liveness)
             }
             Body::Dup(dst_name, src_name, e) => {
-                let linear = Some(Rc::new(Scope(
-                    dst_name.clone(),
-                    find_variable(&linear, &src_name).unwrap().clone(),
-                    linear,
-                )));
+                linear.insert(dst_name.clone(), linear.get(&src_name).unwrap().clone());
                 let (r, mut liveness) = e.insert_drop_reuse(linear, borrow);
                 liveness.insert(src_name.clone());
                 (Body::Dup(src_name, dst_name, Box::new(r)), liveness)
@@ -105,26 +106,18 @@ impl Bind {
     /// Notice
     pub fn insert_drop_reuse(
         self,
-        mut linear: NullableScope<Type>,
-        mut borrow: NullableScope<Type>,
+        mut linear: HashMap<Name, Type>,
+        mut borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
         // add pattern to new env
         if let Owned::Linear = self.owned {
-            linear = self
-                .pat
-                .type_binding(&self.ty)
-                .into_iter()
-                .fold(linear, |scope, (name, ty)| {
-                    Some(Rc::new(Scope(name, ty, scope)))
-                });
+            for (name, ty) in self.pat.type_binding(&self.ty).into_iter() {
+                linear.insert(name, ty);
+            }
         } else {
-            borrow = self
-                .pat
-                .type_binding(&self.ty)
-                .into_iter()
-                .fold(borrow, |scope, (name, ty)| {
-                    Some(Rc::new(Scope(name, ty, scope)))
-                });
+            for (name, ty) in self.pat.type_binding(&self.ty).into_iter() {
+                borrow.insert(name, ty);
+            }
         }
 
         let pat_deefined_vars = &self.pat.defined_vars();
@@ -183,8 +176,8 @@ impl Compute {
     /// Notice
     pub fn insert_drop_reuse(
         self,
-        linear: NullableScope<Type>,
-        borrow: NullableScope<Type>,
+        mut linear: HashMap<Name, Type>,
+        mut borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
         match self {
             Compute::Closure {
@@ -194,36 +187,20 @@ impl Compute {
                 body,
             } => {
                 // add free_vars to linear
-                let linear = free_vars.iter().fold(linear, |env, name| {
-                    let ty = find_variable(&env, name).unwrap();
-                    Some(Rc::new(Scope(name.clone(), ty.clone(), env)))
-                });
-                // add params to linear and borrow
-                let linear =
-                    params
-                        .iter()
-                        .enumerate()
-                        .fold(linear, |env, (index, (name, owned))| {
-                            if let Owned::Linear = owned {
-                                let ty = fun_type.params.get(index).unwrap();
-                                Some(Rc::new(Scope(name.clone(), ty.clone(), env)))
-                            } else {
-                                env
-                            }
-                        });
+                for name in free_vars.iter() {
+                    let ty = linear.get(name).unwrap().clone();
+                    linear.insert(name.clone(), ty);
+                }
 
-                let borrow =
-                    params
-                        .iter()
-                        .enumerate()
-                        .fold(borrow, |env, (index, (name, owned))| {
-                            if let Owned::Borrow = owned {
-                                let ty = fun_type.params.get(index).unwrap();
-                                Some(Rc::new(Scope(name.clone(), ty.clone(), env)))
-                            } else {
-                                env
-                            }
-                        });
+                // add params to linear and borrow
+                for (index, (name, owned)) in params.iter().enumerate() {
+                    let ty = fun_type.params.get(index).unwrap();
+                    if let Owned::Linear = owned {
+                        linear.insert(name.to_string(), ty.clone());
+                    } else {
+                        borrow.insert(name.to_string(), ty.clone());
+                    }
+                }
 
                 let (body, _) = body.insert_drop_reuse(linear, borrow);
                 // notice: closure_liveness equal to free_vars
@@ -251,8 +228,8 @@ impl If {
     /// Trivial
     pub fn insert_drop_reuse(
         self,
-        linear: NullableScope<Type>,
-        borrow: NullableScope<Type>,
+        linear: HashMap<Name, Type>,
+        borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
         let borrowed_self = self;
         let (it1, mut liveness1) = borrowed_self
@@ -276,38 +253,32 @@ impl Match {
     /// Notice
     pub fn insert_drop_reuse(
         self,
-        linear: NullableScope<Type>,
-        borrow: NullableScope<Type>,
+        linear: HashMap<Name, Type>,
+        borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
-        let ty: Type = find_variable(&linear, self.value.as_str()).unwrap();
+        let ty: &Type = linear.get(&self.value).unwrap();
 
         let mut new_liveness = HashSet::new();
         let mut pairs = Vec::new();
 
         for (pat, body) in self.matchs.into_iter() {
+            let mut new_linear = linear.clone();
+            let mut new_borrow = borrow.clone();
             // add pattern to new env
-            let (linear, borrow) = if let Owned::Linear = self.owned {
-                let linear = pat
-                    .type_binding(&ty)
-                    .into_iter()
-                    .fold(linear.clone(), |scope, (name, ty)| {
-                        Some(Rc::new(Scope(name, ty.clone(), scope)))
-                    });
-                (linear, borrow.clone())
+            if let Owned::Linear = self.owned {
+                for (name, ty) in pat.type_binding(ty).into_iter() {
+                    new_linear.insert(name, ty);
+                }
             } else {
-                let borrow = pat
-                    .type_binding(&ty)
-                    .into_iter()
-                    .fold(borrow.clone(), |scope, (name, ty)| {
-                        Some(Rc::new(Scope(name, ty.clone(), scope)))
-                    });
-                (linear.clone(), borrow)
-            };
+                for (name, ty) in pat.type_binding(ty).into_iter() {
+                    new_borrow.insert(name, ty);
+                }
+            }
 
             let pat_deefined_vars = pat.defined_vars();
 
             // run pass
-            let (mut body, liveness) = body.insert_drop_reuse(linear, borrow);
+            let (mut body, liveness) = body.insert_drop_reuse(new_linear, new_borrow);
             let liveness: HashSet<Name> =
                 liveness.difference(&pat_deefined_vars).cloned().collect();
 
