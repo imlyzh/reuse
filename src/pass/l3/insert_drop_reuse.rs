@@ -18,6 +18,7 @@ impl Function {
             }
         }
         let (body, liveness) = self.body.insert_drop_reuse(linear, borrow);
+        // TODO: liveness difference params
         (Function { body, ..self }, liveness)
     }
 }
@@ -26,14 +27,17 @@ impl Body {
     /// Notice
     pub fn insert_drop_reuse(
         self,
-        mut linear: NullableScope<Type>,
+        linear: NullableScope<Type>,
         borrow: NullableScope<Type>,
     ) -> (Self, HashSet<Name>) {
         // order problem
-        let (mut body, liveness) = self.process_match_raw(linear.clone(), borrow.clone());
-        while let Some(var) = linear {
+        let mut body = self.clone();
+        let mut team_linear = linear.clone();
+        while let Some(var) = team_linear {
             // if variable is not live
-            if !liveness.contains(&var.0) {
+            // if !liveness.contains(&var.0) {
+            // FIXME
+            if !body.free_vars().contains(&var.0) {
                 body = if let Some(new_body) = body.rewrite_construct(&var.0, &var.1) {
                     Body::DropReuse(
                         format!("__reuse_{}", &var.0),
@@ -45,8 +49,9 @@ impl Body {
                 };
                 // body = Body::Drop(var.0.clone(), Box::new(body));
             }
-            linear = var.2.clone();
+            team_linear = var.2.clone();
         }
+        let (body, liveness) = body.process_match_raw(linear.clone(), borrow.clone());
         (body, liveness)
     }
 
