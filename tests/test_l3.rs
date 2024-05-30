@@ -23,12 +23,18 @@ pub fn test_l3() {
             owned: Owned::Linear,
             ty: input_output_type.clone(),
             value: "a".to_string(),
-            cont: Box::new(Body::Compute(Compute::Constructor(
-                "Cons".to_owned(),
-                input_output_type,
-                None,
-                vec!["x".to_string(), "xx".to_string()],
-            ))),
+            cont: Box::new(Body::Bind(Bind {
+                var: "t".to_owned(),
+                owned: Owned::Linear,
+                ty: input_output_type.clone(),
+                value: Box::new(Compute::Constructor(
+                    "Cons".to_owned(),
+                    input_output_type,
+                    None,
+                    vec!["x".to_string(), "xx".to_string()],
+                )),
+                cont: Box::new(Body::Move("t".to_owned())),
+            })),
         }),
     };
     let (r, liveness) = f.insert_drop_reuse();
@@ -57,7 +63,7 @@ pub fn test_l3_1() {
             owned: Owned::Linear,
             ty: input_output_type.clone(),
             value: "a".to_string(),
-            cont: Box::new(Body::Compute(Compute::Variable("xx".to_owned()))),
+            cont: Box::new(Body::Move("xx".to_owned())),
         }),
     };
     let (r, liveness) = f.insert_drop_reuse();
@@ -88,8 +94,8 @@ pub fn test_l3_if() {
             value: "a".to_string(),
             cont: Box::new(Body::If(If {
                 cond: "x".to_owned(),
-                then: Box::new(Body::Compute(Compute::Variable("x".to_owned()))),
-                else_: Box::new(Body::Compute(Compute::Variable("xx".to_owned()))),
+                then: Box::new(Body::Move("x".to_owned())),
+                else_: Box::new(Body::Move("xx".to_owned())),
             })),
         }),
     };
@@ -137,13 +143,13 @@ pub fn test_l3_nested_if() {
                     cond: "x".to_owned(),
                     then: Box::new(Body::If(If {
                         cond: "y".to_owned(),
-                        then: Box::new(Body::Compute(Compute::Variable("x".to_owned()))),
-                        else_: Box::new(Body::Compute(Compute::Variable("y".to_owned()))),
+                        then: Box::new(Body::Move("x".to_owned())),
+                        else_: Box::new(Body::Move("y".to_owned())),
                     })),
                     else_: Box::new(Body::If(If {
                         cond: "y".to_owned(),
-                        then: Box::new(Body::Compute(Compute::Variable("xx".to_owned()))),
-                        else_: Box::new(Body::Compute(Compute::Variable("yy".to_owned()))),
+                        then: Box::new(Body::Move("xx".to_owned())),
+                        else_: Box::new(Body::Move("yy".to_owned())),
                     })),
                 })),
             })),

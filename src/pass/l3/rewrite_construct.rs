@@ -123,7 +123,8 @@ impl Body {
         match self {
             Body::Bind(b) => b.rewrite_construct(name, ty).map(Body::Bind),
             Body::BindPattern(b) => b.rewrite_construct(name, ty).map(Body::BindPattern),
-            Body::Compute(c) => c.rewrite_construct(name, ty).map(Body::Compute),
+            // Body::Compute(c) => c.rewrite_construct(name, ty).map(Body::Compute),
+            Body::Move(_) => None,
             // Body::Dup(dst_name, src_name, e) => e
             //     .rewrite_construct(name, ty)
             //     .map(|e| Body::Dup(dst_name.clone(), src_name.clone(), Box::new(e))),

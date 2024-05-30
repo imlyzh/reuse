@@ -87,10 +87,11 @@ impl Body {
                 let (r, liveness) = m.insert_drop_reuse(linear, borrow);
                 (Body::Match(r), liveness)
             }
-            Body::Compute(c) => {
-                let liveness = c.free_vars();
-                (Body::Compute(c), liveness)
-            }
+            // Body::Compute(c) => {
+            //     let liveness = c.free_vars();
+            //     (Body::Compute(c), liveness)
+            // }
+            Body::Move(var) => (Body::Move(var.clone()), vec![var].into_iter().collect()),
             Body::Dup(name, e) => {
                 let (r, liveness) = e.insert_drop_reuse(linear, borrow);
                 (Body::Dup(name, Box::new(r)), liveness)

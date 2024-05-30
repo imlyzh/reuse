@@ -9,7 +9,8 @@ impl Body {
             Body::BindPattern(b) => b.free_vars(),
             Body::If(i) => i.free_vars(),
             Body::Match(m) => m.free_vars(),
-            Body::Compute(c) => c.free_vars(),
+            // Body::Compute(c) => c.free_vars(),
+            Body::Move(var) => vec![var.clone()].into_iter().collect(),
             Body::Dup(_, e) => e.free_vars(),
             // Body::Dup(_, src_value, e) => {
             //     let mut r = e.free_vars();
@@ -27,7 +28,7 @@ impl Body {
 impl Compute {
     pub fn free_vars(&self) -> HashSet<String> {
         match self {
-            Compute::Variable(v) => vec![v.clone()].into_iter().collect(),
+            Compute::Move(v) => vec![v.clone()].into_iter().collect(),
             Compute::Invoke(f, args) => {
                 let mut r: HashSet<String> = HashSet::new();
                 r.insert(f.clone());

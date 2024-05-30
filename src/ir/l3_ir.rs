@@ -7,7 +7,7 @@ pub type Name = String;
 #[derive(Debug, Clone)]
 pub enum Body {
     // Bind(Pattern, Box<Expr>, Box<Expr>),
-    Compute(Compute),
+    Move(Name),
     Bind(Bind),
     BindPattern(BindPattern),
     If(If),
@@ -19,7 +19,7 @@ pub enum Body {
 
 #[derive(Debug, Clone)]
 pub enum Compute {
-    Variable(Name),
+    Move(Name),
     Invoke(Name, Vec<Name>),
     // Lambda(params, body)
     // Lambda(Vec<String>, Box<Expr>),

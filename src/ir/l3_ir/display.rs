@@ -26,7 +26,8 @@ impl fmt::Display for Function {
 impl fmt::Display for Body {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Body::Compute(c) => c.fmt(f),
+            // Body::Compute(c) => c.fmt(f),
+            Body::Move(name) => write!(f, "{}", name),
             Body::Bind(b) => b.fmt(f),
             Body::BindPattern(b) => b.fmt(f),
             Body::If(i) => i.fmt(f),
@@ -44,7 +45,7 @@ impl fmt::Display for Body {
 impl fmt::Display for Compute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Compute::Variable(v) => write!(f, "{}", v),
+            Compute::Move(v) => write!(f, "{}", v),
             Compute::Invoke(fun, args) => {
                 let args = args.to_vec().join(", ");
                 write!(f, "{}({})", fun, args)
