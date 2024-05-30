@@ -16,8 +16,12 @@ impl Function {
                 borrow.insert(name.clone(), ty.clone());
             }
         }
-        let (body, liveness) = self.body.insert_drop_reuse(linear, borrow);
-        // TODO: liveness difference params
+        let (body, mut liveness) = self.body.insert_drop_reuse(linear, borrow);
+
+        for (name, _) in self.args.iter() {
+            liveness.remove(name);
+        }
+
         (Function { body, ..self }, liveness)
     }
 }
