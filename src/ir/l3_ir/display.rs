@@ -28,14 +28,15 @@ impl fmt::Display for Body {
         match self {
             Body::Compute(c) => c.fmt(f),
             Body::Bind(b) => b.fmt(f),
+            Body::BindPattern(b) => b.fmt(f),
             Body::If(i) => i.fmt(f),
             Body::Match(m) => m.fmt(f),
-            Body::Dup(dst, src, cont) => write!(f, "let {} = dup {};\n{}", dst, src, cont),
+            Body::Dup(src, cont) => write!(f, "dup {};\n{}", src, cont),
+            // Body::Dup(dst, src, cont) => write!(f, "let {} = dup {};\n{}", dst, src, cont),
             Body::Drop(src, cont) => write!(f, "drop {};\n{}", src, cont),
             Body::DropReuse(reuse, src, cont) => {
                 write!(f, "let {} = drop-reuse {};\n{}", reuse, src, cont)
-            }
-            Body::DupOnBind(src, cont) => write!(f, "init-dup {};\n{}", src, cont),
+            } // Body::DupOnBind(src, cont) => write!(f, "init-dup {};\n{}", src, cont),
         }
     }
 }
@@ -75,6 +76,16 @@ impl fmt::Display for Compute {
 }
 
 impl fmt::Display for Bind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Owned::Linear = self.owned {
+            write!(f, "let {} = {};\n{}", self.var, self.value, self.cont)
+        } else {
+            write!(f, "let^ {} = {};\n{}", self.var, self.value, self.cont)
+        }
+    }
+}
+
+impl fmt::Display for BindPattern {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Owned::Linear = self.owned {
             write!(f, "let {} = {};\n{}", self.pat, self.value, self.cont)

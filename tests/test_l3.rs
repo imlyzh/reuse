@@ -7,11 +7,12 @@ pub fn test_l3() {
         name: "Cons".to_owned(),
         fields: vec![Type::Int, Type::Int],
     });
+    /* */
     let f = Function {
         name: "test".to_string(),
         return_type: input_output_type.clone(),
         args: vec![("a".to_string(), (input_output_type.clone(), Owned::Linear))],
-        body: Body::Bind(Bind {
+        body: Body::BindPattern(BindPattern {
             pat: Pattern::Constructor(
                 "Cons".to_owned(),
                 vec![
@@ -21,7 +22,7 @@ pub fn test_l3() {
             ),
             owned: Owned::Linear,
             ty: input_output_type.clone(),
-            value: Box::new(Compute::Variable("a".to_string())),
+            value: "a".to_string(),
             cont: Box::new(Body::Compute(Compute::Constructor(
                 "Cons".to_owned(),
                 input_output_type,
@@ -45,7 +46,7 @@ pub fn test_l3_1() {
         name: "test".to_string(),
         return_type: Type::Int,
         args: vec![("a".to_string(), (input_output_type.clone(), Owned::Linear))],
-        body: Body::Bind(Bind {
+        body: Body::BindPattern(BindPattern {
             pat: Pattern::Constructor(
                 "Cons".to_owned(),
                 vec![
@@ -55,7 +56,7 @@ pub fn test_l3_1() {
             ),
             owned: Owned::Linear,
             ty: input_output_type.clone(),
-            value: Box::new(Compute::Variable("a".to_string())),
+            value: "a".to_string(),
             cont: Box::new(Body::Compute(Compute::Variable("xx".to_owned()))),
         }),
     };
@@ -74,7 +75,7 @@ pub fn test_l3_if() {
         name: "test".to_string(),
         return_type: Type::Int,
         args: vec![("a".to_string(), (input_output_type.clone(), Owned::Linear))],
-        body: Body::Bind(Bind {
+        body: Body::BindPattern(BindPattern {
             pat: Pattern::Constructor(
                 "Cons".to_owned(),
                 vec![
@@ -84,7 +85,7 @@ pub fn test_l3_if() {
             ),
             owned: Owned::Linear,
             ty: input_output_type.clone(),
-            value: Box::new(Compute::Variable("a".to_string())),
+            value: "a".to_string(),
             cont: Box::new(Body::If(If {
                 cond: "x".to_owned(),
                 then: Box::new(Body::Compute(Compute::Variable("x".to_owned()))),
@@ -110,7 +111,7 @@ pub fn test_l3_nested_if() {
             ("a".to_string(), (input_output_type.clone(), Owned::Linear)),
             ("b".to_string(), (input_output_type.clone(), Owned::Linear)),
         ],
-        body: Body::Bind(Bind {
+        body: Body::BindPattern(BindPattern {
             pat: Pattern::Constructor(
                 "Cons".to_owned(),
                 vec![
@@ -120,8 +121,8 @@ pub fn test_l3_nested_if() {
             ),
             owned: Owned::Linear,
             ty: input_output_type.clone(),
-            value: Box::new(Compute::Variable("a".to_string())),
-            cont: Box::new(Body::Bind(Bind {
+            value: "a".to_string(),
+            cont: Box::new(Body::BindPattern(BindPattern {
                 pat: Pattern::Constructor(
                     "Cons".to_owned(),
                     vec![
@@ -131,7 +132,7 @@ pub fn test_l3_nested_if() {
                 ),
                 owned: Owned::Linear,
                 ty: input_output_type.clone(),
-                value: Box::new(Compute::Variable("b".to_string())),
+                value: "b".to_string(),
                 cont: Box::new(Body::If(If {
                     cond: "x".to_owned(),
                     then: Box::new(Body::If(If {

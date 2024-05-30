@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::identity};
 // use std::rc::Rc;
 
 use crate::{
-    ir::l3_ir::{Bind, Body, Compute, If, Match, Name, Pattern},
+    ir::l3_ir::{Bind, BindPattern, Body, Compute, If, Match, Name, Pattern},
     types::{StructType, Type},
     // l2_ir::{If, Match},
     // utils::Scope,
@@ -122,10 +122,14 @@ impl Body {
     pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
         match self {
             Body::Bind(b) => b.rewrite_construct(name, ty).map(Body::Bind),
+            Body::BindPattern(b) => b.rewrite_construct(name, ty).map(Body::BindPattern),
             Body::Compute(c) => c.rewrite_construct(name, ty).map(Body::Compute),
-            Body::Dup(dst_name, src_name, e) => e
+            // Body::Dup(dst_name, src_name, e) => e
+            //     .rewrite_construct(name, ty)
+            //     .map(|e| Body::Dup(dst_name.clone(), src_name.clone(), Box::new(e))),
+            Body::Dup(src_name, e) => e
                 .rewrite_construct(name, ty)
-                .map(|e| Body::Dup(dst_name.clone(), src_name.clone(), Box::new(e))),
+                .map(|e| Body::Dup(src_name.clone(), Box::new(e))),
             Body::Drop(src_name, e) => e
                 .rewrite_construct(name, ty)
                 .map(|e| Body::Drop(src_name.clone(), Box::new(e))),
@@ -134,9 +138,9 @@ impl Body {
                 .map(|e| Body::DropReuse(new_name.clone(), src_name.clone(), Box::new(e))),
             Body::If(i) => i.rewrite_construct(name, ty).map(Body::If),
             Body::Match(m) => m.rewrite_construct(name, ty).map(Body::Match),
-            Body::DupOnBind(src_name, e) => e
-                .rewrite_construct(name, ty)
-                .map(|e| Body::DupOnBind(src_name.clone(), Box::new(e))),
+            // Body::DupOnBind(src_name, e) => e
+            //     .rewrite_construct(name, ty)
+            //     .map(|e| Body::DupOnBind(src_name.clone(), Box::new(e))),
         }
     }
 }
@@ -144,22 +148,38 @@ impl Body {
 impl Bind {
     /// Trivial
     pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
+        if let Some(value) = self.value.rewrite_construct(name, ty) {
+            return Some(Bind {
+                var: self.var.clone(),
+                owned: self.owned,
+                ty: self.ty.clone(),
+                value: Box::new(value),
+                cont: self.cont.clone(),
+            });
+        }
         if let Some(cont) = self.cont.rewrite_construct(name, ty) {
             return Some(Bind {
-                pat: self.pat.clone(),
+                var: self.var.clone(),
                 owned: self.owned,
                 ty: self.ty.clone(),
                 value: self.value.clone(),
                 cont: Box::new(cont),
             });
         }
-        if let Some(value) = self.value.rewrite_construct(name, ty) {
-            return Some(Bind {
+        None
+    }
+}
+
+impl BindPattern {
+    /// Trivial
+    pub fn rewrite_construct(&self, name: &Name, ty: &Type) -> Option<Self> {
+        if let Some(cont) = self.cont.rewrite_construct(name, ty) {
+            return Some(BindPattern {
                 pat: self.pat.clone(),
                 owned: self.owned,
                 ty: self.ty.clone(),
-                value: Box::new(value),
-                cont: self.cont.clone(),
+                value: self.value.clone(),
+                cont: Box::new(cont),
             });
         }
         None

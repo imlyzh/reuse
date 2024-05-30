@@ -9,10 +9,10 @@ pub enum Body {
     // Bind(Pattern, Box<Expr>, Box<Expr>),
     Compute(Compute),
     Bind(Bind),
+    BindPattern(BindPattern),
     If(If),
     Match(Match),
-    DupOnBind(Name, Box<Body>),
-    Dup(Name, Name, Box<Body>),
+    Dup(Name, Box<Body>),
     Drop(Name, Box<Body>),
     DropReuse(Name, Name, Box<Body>),
 }
@@ -34,10 +34,19 @@ pub enum Compute {
 
 #[derive(Debug, Clone)]
 pub struct Bind {
-    pub pat: Pattern,
+    pub var: Name,
     pub owned: Owned,
     pub ty: Type,
     pub value: Box<Compute>,
+    pub cont: Box<Body>,
+}
+
+#[derive(Debug, Clone)]
+pub struct BindPattern {
+    pub pat: Pattern,
+    pub owned: Owned,
+    pub ty: Type,
+    pub value: Name,
     pub cont: Box<Body>,
 }
 

@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    ir::l3_ir::{Bind, Body, Compute, Function, If, Match, Name, Owned},
+    ir::l3_ir::{Bind, BindPattern, Body, Compute, Function, If, Match, Name, Owned},
     types::Type,
 };
 
@@ -63,13 +63,17 @@ impl Body {
     // pub fn insert_drop_reuse(
     pub fn process_match_raw(
         self,
-        mut linear: HashMap<Name, Type>,
+        linear: HashMap<Name, Type>,
         borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
         match self {
             Body::Bind(b) => {
                 let (r, liveness) = b.insert_drop_reuse(linear, borrow);
                 (Body::Bind(r), liveness)
+            }
+            Body::BindPattern(b) => {
+                let (r, liveness) = b.insert_drop_reuse(linear, borrow);
+                (Body::BindPattern(r), liveness)
             }
             Body::If(i) => {
                 let (r, liveness) = i.insert_drop_reuse(linear, borrow);
@@ -83,12 +87,16 @@ impl Body {
                 let liveness = c.free_vars();
                 (Body::Compute(c), liveness)
             }
-            Body::Dup(dst_name, src_name, e) => {
-                linear.insert(dst_name.clone(), linear.get(&src_name).unwrap().clone());
-                let (r, mut liveness) = e.insert_drop_reuse(linear, borrow);
-                liveness.insert(src_name.clone());
-                (Body::Dup(src_name, dst_name, Box::new(r)), liveness)
+            Body::Dup(name, e) => {
+                let (r, liveness) = e.insert_drop_reuse(linear, borrow);
+                (Body::Dup(name, Box::new(r)), liveness)
             }
+            // Body::Dup(dst_name, src_name, e) => {
+            //     linear.insert(dst_name.clone(), linear.get(&src_name).unwrap().clone());
+            //     let (r, mut liveness) = e.insert_drop_reuse(linear, borrow);
+            //     liveness.insert(src_name.clone());
+            //     (Body::Dup(src_name, dst_name, Box::new(r)), liveness)
+            // }
             Body::Drop(name, e) => {
                 let (r, liveness) = e.insert_drop_reuse(linear, borrow);
                 (Body::Drop(name, Box::new(r)), liveness)
@@ -96,8 +104,7 @@ impl Body {
             Body::DropReuse(new_name, name, e) => {
                 let (r, liveness) = e.insert_drop_reuse(linear, borrow);
                 (Body::DropReuse(new_name, name, Box::new(r)), liveness)
-            }
-            Body::DupOnBind(_, _) => unreachable!(),
+            } // Body::DupOnBind(_, _) => unreachable!(),
         }
     }
 }
@@ -111,20 +118,15 @@ impl Bind {
     ) -> (Self, HashSet<Name>) {
         // add pattern to new env
         if let Owned::Linear = self.owned {
-            for (name, ty) in self.pat.type_binding(&self.ty).into_iter() {
-                linear.insert(name, ty);
-            }
+            linear.insert(self.var.clone(), self.ty.clone());
         } else {
-            for (name, ty) in self.pat.type_binding(&self.ty).into_iter() {
-                borrow.insert(name, ty);
-            }
+            borrow.insert(self.var.clone(), self.ty.clone());
         }
-
-        let pat_deefined_vars = &self.pat.defined_vars();
+        // let pat_deefined_vars = &self.pat.defined_vars();
 
         // run pass
-        let (cont, liveness) = self.cont.insert_drop_reuse(linear.clone(), borrow.clone());
-        let liveness: HashSet<Name> = liveness.difference(pat_deefined_vars).cloned().collect();
+        let (cont, mut liveness) = self.cont.insert_drop_reuse(linear.clone(), borrow.clone());
+        liveness.remove(&self.var);
 
         let (value, it2_free_vars) = self.value.insert_drop_reuse(linear.clone(), borrow.clone());
         let liveness = liveness.union(&it2_free_vars).cloned().collect();
@@ -154,17 +156,86 @@ impl Bind {
         // */
 
         // insert DUP to Pattern Bind after
-        // /* Disable option
+        /* Disable option
         let cont = pat_deefined_vars.iter().fold(cont, |body, var| {
             Body::DupOnBind(var.clone(), Box::new(body))
         });
         // */
         (
             Bind {
-                pat: self.pat,
+                var: self.var,
                 owned: self.owned,
                 ty: self.ty,
                 value: Box::new(value),
+                cont: Box::new(cont),
+            },
+            liveness,
+        )
+    }
+}
+
+impl BindPattern {
+    /// Notice
+    pub fn insert_drop_reuse(
+        self,
+        mut linear: HashMap<Name, Type>,
+        mut borrow: HashMap<Name, Type>,
+    ) -> (Self, HashSet<Name>) {
+        // add pattern to new env
+        if let Owned::Linear = self.owned {
+            for (name, ty) in self.pat.type_binding(&self.ty).into_iter() {
+                linear.insert(name, ty);
+            }
+        } else {
+            for (name, ty) in self.pat.type_binding(&self.ty).into_iter() {
+                borrow.insert(name, ty);
+            }
+        }
+
+        let pat_deefined_vars = &self.pat.defined_vars();
+
+        // run pass
+        let (cont, liveness) = self.cont.insert_drop_reuse(linear.clone(), borrow.clone());
+        let mut liveness: HashSet<Name> = liveness.difference(pat_deefined_vars).cloned().collect();
+
+        liveness.insert(self.value.clone());
+
+        // TODO
+        // get bind used variable, liveness check, try rewrite
+        /* Disable option
+        let mut cont = cont;
+        if let Owned::Linear = self.owned {
+            cont = it2_free_vars.into_iter().fold(cont, |body, var|
+            // is linear
+            if !liveness.contains(&var) {
+                // find var type
+                let ty: Type = find_variable(&linear, &var).unwrap();
+                // try rewrite construct
+                if let Some(new_body) = body.rewrite_construct(&var, &ty) {
+                    Body::DropReuse(format!("__reuse_{}", var), var, Box::new(new_body))
+                } else {
+                    Body::Drop(var, Box::new(body))
+                }
+            } else {
+                body
+            });
+        } else {
+            cont
+        };
+        // */
+
+        // insert DUP to Pattern Bind after
+        // /* Disable option
+        let cont = pat_deefined_vars
+            .iter()
+            .fold(cont, |body, var| Body::Dup(var.clone(), Box::new(body)));
+        // */
+        (
+            BindPattern {
+                pat: self.pat,
+                owned: self.owned,
+                ty: self.ty,
+                value: self.value,
                 cont: Box::new(cont),
             },
             liveness,
@@ -301,9 +372,9 @@ impl Match {
 
             // insert DUP to Pattern Bind after
             // /* Disable option
-            body = pat_deefined_vars.into_iter().fold(body, |body, var| {
-                Body::DupOnBind(var.clone(), Box::new(body))
-            });
+            body = pat_deefined_vars
+                .into_iter()
+                .fold(body, |body, var| Body::Dup(var.clone(), Box::new(body)));
             // */
             new_liveness.extend(liveness);
             pairs.push((pat, body));
