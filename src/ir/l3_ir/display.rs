@@ -2,10 +2,10 @@ use std::fmt;
 
 use crate::{
     ir::l3_ir::*,
-    types::{FunctionType, StructType, Type},
+    types::{FunctionType, Owned, StructType, Type},
 };
 
-use super::{Compute, Function, Owned};
+use super::{Compute, Function};
 
 impl fmt::Display for Function {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -57,10 +57,11 @@ impl fmt::Display for Compute {
                 params,
                 body,
             } => {
+                // FIXME: owned
                 let args = params
-                    .iter()
-                    .map(|(name, owned)| format!("{} {}", owned, name))
-                    .collect::<Vec<String>>()
+                    // .iter()
+                    // .map(|name| format!("{}", name))
+                    // .collect::<Vec<String>>()
                     .join(", ");
                 write!(f, "fn({}) -> {} {{\n{}}}\n", args, fun_type, body)
             }
@@ -169,7 +170,7 @@ impl fmt::Display for FunctionType {
         let params = self
             .params
             .iter()
-            .map(|x| x.to_string())
+            .map(|(x, _)| x.to_string())
             .collect::<Vec<String>>()
             .join(", ");
         write!(f, "({}) -> {}", params, self.ret_type)

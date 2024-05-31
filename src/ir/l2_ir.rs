@@ -1,12 +1,12 @@
-use crate::types::{FunctionType, Type};
+use crate::types::{FunctionType, Owned, Type};
 
 pub type Name = String;
 
 #[derive(Debug, Clone)]
 pub enum Body {
-    // Bind(Pattern, Box<Expr>, Box<Expr>),
-    Compute(Compute),
+    Variable(Name),
     Bind(Bind),
+    BindPattern(BindPattern),
     If(If),
     Match(Match),
 }
@@ -15,8 +15,6 @@ pub enum Body {
 pub enum Compute {
     Variable(Name),
     Invoke(Name, Vec<Name>),
-    // Lambda(params, body)
-    // Lambda(Vec<String>, Box<Expr>),
     Closure {
         fun_type: FunctionType,
         free_vars: Vec<Name>,
@@ -27,13 +25,33 @@ pub enum Compute {
 }
 
 #[derive(Debug, Clone)]
-pub struct Bind(pub Pattern, pub Type, pub Box<Compute>, pub Box<Body>);
+pub struct Bind {
+    pub var: Name,
+    pub ty: Type,
+    pub value: Box<Compute>,
+    pub cont: Box<Body>,
+}
 
 #[derive(Debug, Clone)]
-pub struct If(pub Name, pub Box<Body>, pub Box<Body>);
+pub struct BindPattern {
+    pub pat: Pattern,
+    pub ty: Type,
+    pub value: Name,
+    pub cont: Box<Body>,
+}
 
 #[derive(Debug, Clone)]
-pub struct Match(pub Name, pub Vec<(Pattern, Body)>);
+pub struct If {
+    pub cond: Name,
+    pub then: Box<Body>,
+    pub else_: Box<Body>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Match {
+    pub value: Name,
+    pub matchs: Vec<(Pattern, Body)>,
+}
 
 #[derive(Debug, Clone)]
 pub enum Pattern {
@@ -45,7 +63,8 @@ pub enum Pattern {
 #[derive(Debug, Clone)]
 pub struct Function {
     pub name: Name,
-    pub args: Vec<Name>,
+    pub return_type: Type,
+    pub args: Vec<(Name, (Type, Owned))>,
     pub body: Body,
 }
 

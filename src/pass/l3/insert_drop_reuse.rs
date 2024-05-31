@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    ir::l3_ir::{Bind, BindPattern, Body, Compute, Function, If, Match, Name, Owned},
-    types::Type,
+    ir::l3_ir::{Bind, BindPattern, Body, Compute, Function, If, Match, Name},
+    types::{Owned, Type},
 };
 
 impl Function {
@@ -269,8 +269,8 @@ impl Compute {
                 }
 
                 // add params to linear and borrow
-                for (index, (name, owned)) in params.iter().enumerate() {
-                    let ty = fun_type.params.get(index).unwrap();
+                for (index, name) in params.iter().enumerate() {
+                    let (ty, owned) = fun_type.params.get(index).unwrap();
                     if let Owned::Linear = owned {
                         linear.insert(name.to_string(), ty.clone());
                     } else {

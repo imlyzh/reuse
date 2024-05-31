@@ -1,5 +1,5 @@
 use reuse::ir::l3_ir::*;
-use reuse::types::{StructType, Type};
+use reuse::types::{Owned, StructType, Type};
 
 #[test]
 pub fn test_l3() {

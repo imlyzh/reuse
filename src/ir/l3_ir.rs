@@ -1,6 +1,6 @@
 pub mod display;
 
-use crate::types::{FunctionType, Type};
+use crate::types::{FunctionType, Owned, Type};
 
 pub type Name = String;
 
@@ -26,7 +26,7 @@ pub enum Compute {
     Closure {
         fun_type: FunctionType,
         free_vars: Vec<Name>,
-        params: Vec<(Name, Owned)>,
+        params: Vec<Name>,
         body: Box<Body>,
     },
     Constructor(String, Type, Option<String>, Vec<Name>),
@@ -69,12 +69,6 @@ pub enum Pattern {
     Wildcard,
     Variable(Name),
     Constructor(Name, Vec<Pattern>),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Owned {
-    Linear,
-    Borrow,
 }
 
 #[derive(Debug, Clone)]

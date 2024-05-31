@@ -15,7 +15,12 @@ pub struct StructType {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionType {
-    // TODO: L2 Owned
-    pub params: Vec<Type>,
+    pub params: Vec<(Type, Owned)>,
     pub ret_type: Box<Type>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Owned {
+    Linear,
+    Borrow,
 }

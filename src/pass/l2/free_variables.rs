@@ -1,17 +1,15 @@
 use std::collections::HashSet;
 
-use crate::ir::l2_ir::{Bind, Body, Compute, If, Match, Pattern};
+use crate::ir::l2_ir::{Bind, BindPattern, Body, Compute, If, Match, Pattern};
 
 impl Body {
     pub fn free_vars(&self) -> HashSet<String> {
         match self {
             Body::Bind(b) => b.free_vars(),
+            Body::BindPattern(b) => b.free_vars(),
             Body::If(i) => i.free_vars(),
             Body::Match(m) => m.free_vars(),
-            Body::Compute(c) => c.free_vars(),
-            Body::Dup(_, e) => e.free_vars(),
-            Body::Drop(_, e) => e.free_vars(),
-            Body::DropReuse(_, _, e) => e.free_vars(),
+            Body::Variable(v) => vec![v.clone()].into_iter().collect(),
         }
     }
 }
@@ -40,19 +38,28 @@ impl Compute {
 
 impl Bind {
     pub fn free_vars(&self) -> HashSet<String> {
-        let r: HashSet<String> = self.3.free_vars();
-        let r: HashSet<String> = r.difference(&self.0.defined_vars()).cloned().collect();
-        r.union(&self.2.free_vars()).cloned().collect()
+        let mut r: HashSet<String> = self.cont.free_vars();
+        r.remove(&self.var);
+        r.union(&self.value.free_vars()).cloned().collect()
+    }
+}
+
+impl BindPattern {
+    pub fn free_vars(&self) -> HashSet<String> {
+        let r: HashSet<String> = self.cont.free_vars();
+        let mut r: HashSet<String> = r.difference(&self.pat.defined_vars()).cloned().collect();
+        r.insert(self.value.clone());
+        r
     }
 }
 
 impl If {
     pub fn free_vars(&self) -> HashSet<String> {
-        let If(c, t, e) = self;
+        let If { cond, then, else_ } = self;
         let mut r: HashSet<String> = HashSet::new();
-        r.insert(c.clone());
-        r.extend(t.free_vars());
-        r.extend(e.free_vars());
+        r.insert(cond.clone());
+        r.extend(then.free_vars());
+        r.extend(else_.free_vars());
         r
     }
 }
@@ -60,7 +67,7 @@ impl If {
 impl Match {
     pub fn free_vars(&self) -> HashSet<String> {
         let mut r = self
-            .1
+            .matchs
             .iter()
             .map(|(pat, expr)| {
                 expr.free_vars()
@@ -70,7 +77,7 @@ impl Match {
             })
             .reduce(|l, r| HashSet::union(&l, &r).cloned().collect())
             .unwrap_or(HashSet::new());
-        r.insert(self.0.clone());
+        r.insert(self.value.clone());
         r
     }
 }
