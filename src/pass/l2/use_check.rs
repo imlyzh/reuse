@@ -5,11 +5,12 @@ use crate::{
     types::Owned,
 };
 
+#[derive(Debug, Default)]
 pub struct Used(HashMap<String, Option<Owned>>);
 
 impl Used {
     pub fn new() -> Self {
-        Used(HashMap::new())
+        Used::default()
     }
     pub fn update(&mut self, name: &str, owned: Owned) -> Result<(), String> {
         // owned state update order
@@ -93,11 +94,7 @@ impl BindPattern {
             .map(|name| used_record.find(&name))
             .all(|x| {
                 if let Some(x) = x {
-                    if let Some(Owned::Borrow) = x {
-                        true
-                    } else {
-                        false
-                    }
+                    matches!(x, Some(Owned::Borrow))
                 } else {
                     true
                 }
@@ -133,11 +130,7 @@ impl Match {
                 .map(|name| used_record.find(&name))
                 .all(|x| {
                     if let Some(x) = x {
-                        if let Some(Owned::Borrow) = x {
-                            true
-                        } else {
-                            false
-                        }
+                        matches!(x, Some(Owned::Borrow))
                     } else {
                         true
                     }
