@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    ir::l2_ir::{Bind, BindPattern, Body, Compute, If, Match},
+    ir::l2_ir::{Bind, BindPattern, Body, Compute, Function, If, Match},
     types::Owned,
 };
 
@@ -31,6 +31,16 @@ impl Used {
             .into_iter()
             .filter_map(|(name, owned)| if owned?.is_linear() { Some(name) } else { None })
             .collect()
+    }
+}
+
+impl Function {
+    pub fn use_check(&self, used_record: &mut Used) -> Result<(), String> {
+        self.body.use_check(used_record)?;
+        for (name, (_ty, owned)) in self.args.iter() {
+            used_record.update(name, *owned)?;
+        }
+        Ok(())
     }
 }
 
