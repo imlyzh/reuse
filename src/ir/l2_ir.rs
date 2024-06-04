@@ -1,6 +1,6 @@
 use crate::types::{FunctionType, Owned, Type};
 
-pub type Name = String;
+use super::common::{Name, Pattern};
 
 #[derive(Debug, Clone)]
 pub enum Body {
@@ -13,15 +13,15 @@ pub enum Body {
 
 #[derive(Debug, Clone)]
 pub enum Compute {
-    Variable(Name),
-    Invoke(Name, Vec<Name>),
+    // Variable(Name),
+    Invoke(Name, Vec<(Name, Owned)>),
     Closure {
         fun_type: FunctionType,
         free_vars: Vec<Name>,
         params: Vec<Name>,
         body: Box<Body>,
     },
-    Constructor(String, Type, Option<String>, Vec<Name>),
+    Constructor(String, Type, Vec<Name>),
 }
 
 #[derive(Debug, Clone)]
@@ -51,13 +51,6 @@ pub struct If {
 pub struct Match {
     pub value: Name,
     pub matchs: Vec<(Pattern, Body)>,
-}
-
-#[derive(Debug, Clone)]
-pub enum Pattern {
-    Wildcard,
-    Variable(Name),
-    Constructor(Name, Vec<Pattern>),
 }
 
 #[derive(Debug, Clone)]

@@ -24,3 +24,18 @@ pub enum Owned {
     Linear,
     Borrow,
 }
+
+impl Owned {
+    pub fn is_linear(&self) -> bool {
+        match self {
+            Owned::Linear => true,
+            Owned::Borrow => false,
+        }
+    }
+    pub fn is_borrow(&self) -> bool {
+        match self {
+            Owned::Borrow => true,
+            Owned::Linear => false,
+        }
+    }
+}

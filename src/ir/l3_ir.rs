@@ -2,6 +2,8 @@ pub mod display;
 
 use crate::types::{FunctionType, Owned, Type};
 
+use super::common::Pattern;
+
 pub type Name = String;
 
 #[derive(Debug, Clone)]
@@ -20,7 +22,7 @@ pub enum Body {
 #[derive(Debug, Clone)]
 pub enum Compute {
     Move(Name),
-    Invoke(Name, Vec<Name>),
+    Invoke(Name, Vec<(Name, Owned)>),
     // Lambda(params, body)
     // Lambda(Vec<String>, Box<Expr>),
     Closure {
@@ -35,7 +37,6 @@ pub enum Compute {
 #[derive(Debug, Clone)]
 pub struct Bind {
     pub var: Name,
-    pub owned: Owned,
     pub ty: Type,
     pub value: Box<Compute>,
     pub cont: Box<Body>,
@@ -64,12 +65,12 @@ pub struct Match {
     pub matchs: Vec<(Pattern, Body)>,
 }
 
-#[derive(Debug, Clone)]
-pub enum Pattern {
-    Wildcard,
-    Variable(Name),
-    Constructor(Name, Vec<Pattern>),
-}
+// #[derive(Debug, Clone)]
+// pub enum Pattern {
+//     Wildcard,
+//     Variable(Name),
+//     Constructor(Name, Vec<Pattern>),
+// }
 
 #[derive(Debug, Clone)]
 pub struct Function {

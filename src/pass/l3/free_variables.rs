@@ -92,17 +92,3 @@ impl Match {
         r
     }
 }
-
-impl Pattern {
-    pub fn defined_vars(&self) -> HashSet<String> {
-        match self {
-            Pattern::Wildcard => HashSet::new(),
-            Pattern::Variable(v) => vec![v.clone()].into_iter().collect(),
-            Pattern::Constructor(_, v) => v
-                .iter()
-                .map(Pattern::defined_vars)
-                .reduce(|l, r| HashSet::union(&l, &r).cloned().collect())
-                .unwrap_or(HashSet::new()),
-        }
-    }
-}

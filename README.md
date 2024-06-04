@@ -17,9 +17,8 @@ AST
 ANF ir
 
 1. [ ] Shadow Veriable Renaming
-2. [ ] Borrow Check
-3. [ ] Linearnize
-   1. [ ] Insert Dup
+2. [x] Borrow Check and Linearnize
+   1. [x] Insert Dup
 
 ### L3 IR
 

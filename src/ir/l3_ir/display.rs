@@ -47,7 +47,11 @@ impl fmt::Display for Compute {
         match self {
             Compute::Move(v) => write!(f, "{}", v),
             Compute::Invoke(fun, args) => {
-                let args = args.to_vec().join(", ");
+                let args = args
+                    .iter()
+                    .map(|(n, _)| n.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 write!(f, "{}({})", fun, args)
             }
             // FIXME: fun_type, free_vars
@@ -79,11 +83,7 @@ impl fmt::Display for Compute {
 
 impl fmt::Display for Bind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Owned::Linear = self.owned {
-            write!(f, "let {} = {};\n{}", self.var, self.value, self.cont)
-        } else {
-            write!(f, "let^ {} = {};\n{}", self.var, self.value, self.cont)
-        }
+        write!(f, "let {} = {};\n{}", self.var, self.value, self.cont)
     }
 }
 
