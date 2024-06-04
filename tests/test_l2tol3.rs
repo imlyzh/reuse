@@ -86,3 +86,51 @@ pub fn test_l2tol3_share() {
     let gen_f = f.linearize(&linears);
     println!("gen result:\n{}", gen_f);
 }
+
+#[test]
+pub fn test_l2tol3_if() {
+    let input_output_type = Type::Struct(StructType {
+        name: "Cons".to_owned(),
+        fields: vec![Type::Int, Type::Int],
+    });
+    /* */
+    let f = Function {
+        name: "test".to_string(),
+        return_type: input_output_type.clone(),
+        args: vec![("a".to_string(), (input_output_type.clone(), Owned::Linear))],
+        body: Body::Bind(Bind {
+            var: "_".to_owned(),
+            ty: Type::Bool,
+            value: Box::new(Compute::Invoke(
+                "take".to_owned(),
+                vec![("a".to_string(), Owned::Linear)],
+            )),
+            cont: Box::new(Body::If(If {
+                cond: "a".to_owned(),
+                then: Box::new(Body::Bind(Bind {
+                    var: "r".to_owned(),
+                    ty: Type::Bool,
+                    value: Box::new(Compute::Invoke(
+                        "take".to_owned(),
+                        vec![("a".to_string(), Owned::Linear)],
+                    )),
+                    cont: Box::new(Body::Bind(Bind {
+                        var: "_".to_owned(),
+                        ty: Type::Bool,
+                        value: Box::new(Compute::Invoke(
+                            "identity".to_owned(),
+                            vec![("a".to_string(), Owned::Linear)],
+                        )),
+                        cont: Box::new(Body::Variable("r".to_owned())),
+                    })),
+                })),
+                else_: Box::new(Body::Variable("a".to_owned())),
+            })),
+        }),
+    };
+    let mut used_record = Used::new();
+    f.use_check(&mut used_record).unwrap();
+    let linears = used_record.to_linears();
+    let gen_f = f.linearize(&linears);
+    println!("gen result:\n{}", gen_f);
+}
