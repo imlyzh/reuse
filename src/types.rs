@@ -1,3 +1,5 @@
+use std::cmp::{self, Ordering};
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Bool,
@@ -19,11 +21,13 @@ pub struct FunctionType {
     pub ret_type: Box<Type>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Owned {
-    Linear,
-    Borrow,
+    Linear = 1,
+    Borrow = 0,
 }
+
+
 
 impl Owned {
     pub fn is_linear(&self) -> bool {
