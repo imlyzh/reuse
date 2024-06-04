@@ -1,9 +1,8 @@
-use std::{collections::HashMap, convert::identity};
 // use std::rc::Rc;
 
 use crate::{
-    ir::l3_ir::{Bind, BindPattern, Body, Compute, If, Match, Name, Pattern},
-    types::{StructType, Type},
+    ir::l3_ir::{Bind, BindPattern, Body, Compute, If, Match, Name},
+    types::Type,
     // l2_ir::{If, Match},
     // utils::Scope,
 };
@@ -152,7 +151,6 @@ impl Bind {
         if let Some(value) = self.value.rewrite_construct(name, ty) {
             return Some(Bind {
                 var: self.var.clone(),
-                owned: self.owned,
                 ty: self.ty.clone(),
                 value: Box::new(value),
                 cont: self.cont.clone(),
@@ -161,7 +159,6 @@ impl Bind {
         if let Some(cont) = self.cont.rewrite_construct(name, ty) {
             return Some(Bind {
                 var: self.var.clone(),
-                owned: self.owned,
                 ty: self.ty.clone(),
                 value: self.value.clone(),
                 cont: Box::new(cont),
@@ -265,31 +262,6 @@ impl Compute {
             }
             // Compute::Closure { free_vars, params, body } => todo!(),
             _ => None,
-        }
-    }
-}
-
-/// binding type to pattern(equality type deconstruct)
-
-impl Pattern {
-    pub fn type_binding(&self, ty: &Type) -> HashMap<Name, Type> {
-        match (self, ty) {
-            (Pattern::Wildcard, _) => HashMap::new(),
-            (Pattern::Variable(v), ty) => vec![(v.clone(), ty.clone())].into_iter().collect(),
-            (Pattern::Constructor(c, params), Type::Struct(StructType { name, fields }))
-                if c == name =>
-            {
-                params
-                    .iter()
-                    .zip(fields)
-                    .map(|(pat, ty)| pat.type_binding(ty))
-                    .reduce(|mut l, r| {
-                        l.extend(r);
-                        l
-                    })
-                    .map_or_else(HashMap::new, identity)
-            }
-            _ => panic!("type binding to pattern, not matched: {:?}, {:?}", self, ty),
         }
     }
 }

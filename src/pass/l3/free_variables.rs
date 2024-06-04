@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use crate::ir::l3_ir::{Bind, BindPattern, Body, Compute, If, Match, Pattern};
+use crate::ir::l3_ir::{Bind, BindPattern, Body, Compute, If, Match};
 
 impl Body {
     pub fn free_vars(&self) -> HashSet<String> {
@@ -32,7 +32,7 @@ impl Compute {
             Compute::Invoke(f, args) => {
                 let mut r: HashSet<String> = HashSet::new();
                 r.insert(f.clone());
-                r.extend(args.clone());
+                r.extend(args.iter().map(|(name, _)| name.to_string()).clone());
                 r.into_iter().collect()
             }
             Compute::Closure { free_vars, .. } => free_vars.iter().cloned().collect(),

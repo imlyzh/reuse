@@ -1,3 +1,4 @@
+use reuse::ir::common::Pattern;
 use reuse::ir::l3_ir::*;
 use reuse::types::{Owned, StructType, Type};
 
@@ -25,7 +26,6 @@ pub fn test_l3() {
             value: "a".to_string(),
             cont: Box::new(Body::Bind(Bind {
                 var: "t".to_owned(),
-                owned: Owned::Linear,
                 ty: input_output_type.clone(),
                 value: Box::new(Compute::Constructor(
                     "Cons".to_owned(),

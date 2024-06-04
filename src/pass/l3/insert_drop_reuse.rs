@@ -119,14 +119,11 @@ impl Bind {
     pub fn insert_drop_reuse(
         self,
         mut linear: HashMap<Name, Type>,
-        mut borrow: HashMap<Name, Type>,
+        borrow: HashMap<Name, Type>,
     ) -> (Self, HashSet<Name>) {
         // add pattern to new env
-        if let Owned::Linear = self.owned {
-            linear.insert(self.var.clone(), self.ty.clone());
-        } else {
-            borrow.insert(self.var.clone(), self.ty.clone());
-        }
+        linear.insert(self.var.clone(), self.ty.clone());
+
         // let pat_deefined_vars = &self.pat.defined_vars();
 
         // run pass
@@ -169,7 +166,6 @@ impl Bind {
         (
             Bind {
                 var: self.var,
-                owned: self.owned,
                 ty: self.ty,
                 value: Box::new(value),
                 cont: Box::new(cont),
