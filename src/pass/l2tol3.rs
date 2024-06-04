@@ -39,7 +39,7 @@ impl l2_ir::Body {
 
 impl l2_ir::Bind {
     pub fn linearize(self, linears: &HashSet<String>) -> Body {
-        let compute_used_vars = self.value.free_vars();
+        let compute_used_vars = self.value.free_linear_vars(linears);
         let cont_free_vars = self.cont.free_vars();
         let cont = self.cont.linearize(linears);
         let bind = Bind {

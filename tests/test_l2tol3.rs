@@ -62,17 +62,17 @@ pub fn test_l2tol3_share() {
                 vec![("a".to_string(), Owned::Linear)],
             )),
             cont: Box::new(Body::Bind(Bind {
-                var: "r".to_owned(),
+                var: "_".to_owned(),
                 ty: Type::Bool,
                 value: Box::new(Compute::Invoke(
-                    "take".to_owned(),
-                    vec![("a".to_string(), Owned::Linear)],
+                    "identity".to_owned(),
+                    vec![("a".to_string(), Owned::Borrow)],
                 )),
                 cont: Box::new(Body::Bind(Bind {
-                    var: "_".to_owned(),
+                    var: "r".to_owned(),
                     ty: Type::Bool,
                     value: Box::new(Compute::Invoke(
-                        "identity".to_owned(),
+                        "take".to_owned(),
                         vec![("a".to_string(), Owned::Linear)],
                     )),
                     cont: Box::new(Body::Variable("r".to_owned())),

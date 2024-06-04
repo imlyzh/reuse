@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use crate::ir::l2_ir::{Bind, BindPattern, Body, Compute, If, Match};
+use crate::{
+    ir::l2_ir::{Bind, BindPattern, Body, Compute, If, Match},
+    types::Owned,
+};
 
 impl Body {
     pub fn free_vars(&self) -> HashSet<String> {
@@ -29,6 +32,34 @@ impl Compute {
                 let mut r: HashSet<String> = HashSet::new();
                 r.insert(f.clone());
                 r.extend(args.iter().map(|(name, _)| name.to_string()));
+                r.into_iter().collect()
+            }
+            Compute::Closure { free_vars, .. } => free_vars.iter().cloned().collect(),
+            // Compute::Constructor(c, _ty, _reuse, params) => {
+            Compute::Constructor(c, _ty, params) => {
+                let mut r: HashSet<String> = params.iter().cloned().collect();
+                r.insert(c.clone());
+                r
+            }
+        }
+    }
+}
+
+impl Compute {
+    pub fn free_linear_vars(&self, linears: &HashSet<String>) -> HashSet<String> {
+        match self {
+            Compute::Invoke(f, args) => {
+                let mut r: HashSet<String> = HashSet::new();
+                if linears.contains(f) {
+                    r.insert(f.clone());
+                }
+                r.extend(args.iter().filter_map(|(name, owned)| {
+                    if let Owned::Linear = owned {
+                        Some(name.to_string())
+                    } else {
+                        None
+                    }
+                }));
                 r.into_iter().collect()
             }
             Compute::Closure { free_vars, .. } => free_vars.iter().cloned().collect(),

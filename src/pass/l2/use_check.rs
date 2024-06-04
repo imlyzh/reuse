@@ -14,6 +14,14 @@ impl Used {
     }
     pub fn update(&mut self, name: &str, owned: Owned) -> Result<(), String> {
         // owned state update order
+        if let Some(Some(Owned::Linear)) = self.0.get(name) {
+            return Ok(());
+        }
+        self.0.insert(name.to_string(), Some(owned));
+        Ok(())
+    }
+    pub fn update_define(&mut self, name: &str, owned: Owned) -> Result<(), String> {
+        // owned state update order
         if owned.is_borrow() {
             if let Some(Some(Owned::Linear)) = self.0.get(name) {
                 return Err(name.to_string());
@@ -38,7 +46,7 @@ impl Function {
     pub fn use_check(&self, used_record: &mut Used) -> Result<(), String> {
         self.body.use_check(used_record)?;
         for (name, (_ty, owned)) in self.args.iter() {
-            used_record.update(name, *owned)?;
+            used_record.update_define(name, *owned)?;
         }
         Ok(())
     }
