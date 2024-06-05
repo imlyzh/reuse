@@ -28,7 +28,6 @@ impl Body {
 impl Compute {
     pub fn free_vars(&self) -> HashSet<String> {
         match self {
-            Compute::Move(v) => vec![v.clone()].into_iter().collect(),
             Compute::Invoke(f, args) => {
                 let mut r: HashSet<String> = HashSet::new();
                 r.insert(f.clone());

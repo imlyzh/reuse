@@ -45,7 +45,6 @@ impl fmt::Display for Body {
 impl fmt::Display for Compute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Compute::Move(v) => write!(f, "{}", v),
             Compute::Invoke(fun, args) => {
                 let args = args
                     .iter()

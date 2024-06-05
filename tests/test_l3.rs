@@ -37,8 +37,8 @@ pub fn test_l3() {
             })),
         }),
     };
-    let (r, liveness) = f.insert_drop_reuse();
-    println!("liveness: {:?}", liveness);
+    println!("test");
+    let r = f.insert_drop_reuse();
     println!("return:\n{}", r);
 }
 
@@ -66,8 +66,7 @@ pub fn test_l3_1() {
             cont: Box::new(Body::Move("xx".to_owned())),
         }),
     };
-    let (r, liveness) = f.insert_drop_reuse();
-    println!("liveness: {:?}", liveness);
+    let r = f.insert_drop_reuse();
     println!("return:\n{}", r);
 }
 
@@ -99,8 +98,7 @@ pub fn test_l3_if() {
             })),
         }),
     };
-    let (r, liveness) = f.insert_drop_reuse();
-    println!("liveness: {:?}", liveness);
+    let r = f.insert_drop_reuse();
     println!("return:\n{}", r);
 }
 
@@ -155,7 +153,6 @@ pub fn test_l3_nested_if() {
             })),
         }),
     };
-    let (r, liveness) = f.insert_drop_reuse();
-    println!("liveness: {:?}", liveness);
+    let r = f.insert_drop_reuse();
     println!("return:\n{}", r);
 }

@@ -21,7 +21,6 @@ pub enum Body {
 
 #[derive(Debug, Clone)]
 pub enum Compute {
-    Move(Name),
     Invoke(Name, Vec<(Name, Owned)>),
     // Lambda(params, body)
     // Lambda(Vec<String>, Box<Expr>),
