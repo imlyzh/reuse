@@ -1,5 +1,3 @@
-use std::cmp::{self, Ordering};
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Bool,
@@ -26,8 +24,6 @@ pub enum Owned {
     Linear = 1,
     Borrow = 0,
 }
-
-
 
 impl Owned {
     pub fn is_linear(&self) -> bool {
