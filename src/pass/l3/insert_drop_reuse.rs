@@ -136,17 +136,27 @@ impl BindPattern {
             }
         }
 
-        let pat_defined_vars = &self.pat.defined_vars();
+        let free_vars = self.cont.free_vars();
+
+        let defined_vars: Vec<_> = self
+            .pat
+            .defined_vars()
+            .into_iter()
+            .filter(|name| free_vars.contains(name))
+            .collect();
 
         let cont = self.cont;
+
+        for name in defined_vars.iter() {
+            linears.insert(name.to_string(), 1);
+        }
 
         // run pass
         let cont = cont.insert_drop_reuse(linears, reuse_types);
 
         // insert DUP to Pattern Bind after
-        let cont = pat_defined_vars
-            .iter()
-            .filter(|name| linears.contains_key(*name))
+        let cont = defined_vars
+            .into_iter()
             .fold(cont, |body, var| Body::Dup(var.clone(), Box::new(body)));
 
         BindPattern {
@@ -256,7 +266,9 @@ impl If {
         reuse_types: &mut HashMap<Name, Type>,
     ) -> Self {
         let borrowed_self = self;
-        let it1 = borrowed_self.then.insert_drop_reuse(linears, reuse_types);
+        let it1 = borrowed_self
+            .then
+            .insert_drop_reuse(&mut linears.clone(), &mut reuse_types.clone());
         let it2 = borrowed_self.else_.insert_drop_reuse(linears, reuse_types);
         If {
             cond: borrowed_self.cond,
@@ -275,31 +287,41 @@ impl Match {
     ) -> Self {
         let ty: Type = reuse_types.get(&self.value).unwrap().clone();
 
-        let mut new_liveness = HashSet::new();
         let mut pairs = Vec::new();
 
         for (pat, body) in self.matchs.into_iter() {
+            let mut new_linears = linears.clone();
+            let mut new_reuse_types = reuse_types.clone();
+
             // add pattern to new env
             if let Owned::Linear = self.owned {
                 for (name, ty) in pat.type_binding(&ty).into_iter() {
-                    reuse_types.insert(name, ty);
+                    new_reuse_types.insert(name, ty);
                 }
             }
 
-            let pat_defined_vars = pat.defined_vars();
+            let free_vars = body.free_vars();
+
+            let defined_vars: Vec<_> = pat
+                .defined_vars()
+                .into_iter()
+                .filter(|name| free_vars.contains(name))
+                .collect();
+
+            for name in defined_vars.iter() {
+                new_linears.insert(name.to_string(), 1);
+            }
 
             // run pass
-            let body = body.insert_drop_reuse(linears, reuse_types);
+            let body = body.insert_drop_reuse(&mut new_linears, &mut new_reuse_types);
 
             // insert DUP to Pattern Bind after
-            let body = pat_defined_vars
+            let body = defined_vars
                 .into_iter()
-                .filter(|name| linears.contains_key(name))
                 .fold(body, |body, var| Body::Dup(var.clone(), Box::new(body)));
 
             pairs.push((pat, body));
         }
-        new_liveness.insert(self.value.clone());
         Match {
             value: self.value,
             owned: self.owned,
